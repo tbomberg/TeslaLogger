@@ -263,7 +263,7 @@ namespace TeslaLogger
 
                 DBHelper.EnableMothership();
 
-                if (KVS.Get("UpdateAllDrivestateData", out int UpdateAllDrivestateDataInt) == KVS.NOT_FOUND)
+                if (KVS.Get("UpdateAllDrivestateData", out int UpdateAllDrivestateDataInt) == KVS.NOT_FOUND || UpdateAllDrivestateDataInt < 2)
                 {
                     UpdateAllDrivestateDateThread();
                 }
@@ -383,6 +383,35 @@ namespace TeslaLogger
                 UpdateTeslalogger.AssertAlterDB();
                 DBHelper.ExecuteSQLQuery(sql);
                 Logfile.Log("CREATE TABLE OK");
+            }
+
+            if (!DBHelper.TableExists("celltemperature"))
+            {
+                string sql = @"CREATE 
+                    VIEW `celltemperature` AS
+                        SELECT 
+                            `can`.`CarID` AS `carid`,
+                            `can`.`datum` AS `date`,
+                            `can`.`val` AS `CellTemperature`,
+                            1 AS `source`
+                        FROM
+                            `can`
+                        WHERE
+                            `can`.`id` = 3 
+                        UNION SELECT 
+                            `battery`.`CarID` AS `carid`,
+                            `battery`.`date` AS `datum`,
+                            `battery`.`ModuleTempMin` AS `CellTemperature`,
+                            2 AS `source`
+                        FROM
+                            `battery`
+                        WHERE
+                            `battery`.`ModuleTempMin` IS NOT NULL";
+
+                Logfile.Log(sql);
+                UpdateTeslalogger.AssertAlterDB();
+                DBHelper.ExecuteSQLQuery(sql);
+                Logfile.Log("CREATE VIEW OK");
             }
         }
 
@@ -1140,6 +1169,20 @@ PRIMARY KEY(id)
                 AssertAlterDB();
                 DBHelper.ExecuteSQLQuery(@"ALTER TABLE `cars` ADD `needFleetAPI` TINYINT UNSIGNED NOT NULL DEFAULT '0'", 600);
             }
+
+            if (!DBHelper.ColumnExists("cars", "access_type"))
+            {
+                Logfile.Log("ALTER TABLE cars ADD Column access_type");
+                AssertAlterDB();
+                DBHelper.ExecuteSQLQuery(@"ALTER TABLE `cars` ADD `access_type` varchar(20) NULL", 600);
+            }
+
+            if (!DBHelper.ColumnExists("cars", "virtualkey")) 
+            {
+                Logfile.Log("ALTER TABLE cars ADD Column virtualkey");
+                AssertAlterDB();
+                DBHelper.ExecuteSQLQuery(@"ALTER TABLE `cars` ADD `virtualkey` TINYINT UNSIGNED  NULL DEFAULT '0'", 600);
+            }
         }
 
         private static void CheckDBSchema_can()
@@ -1401,6 +1444,11 @@ PRIMARY KEY(id)
                 Logfile.Log("End update");
 
                 Logfile.Log("Rebooting");
+
+                foreach (Car car in Car.Allcars)
+                {
+                    car.CurrentJSON.ToKVS();
+                }
 
                 Tools.ExecMono("reboot", "");
             }
@@ -2653,6 +2701,12 @@ PRIMARY KEY(id)
                             else
                             {
                                 Logfile.Log("Rebooting");
+
+                                foreach (Car car in Car.Allcars)
+                                {
+                                    car.CurrentJSON.ToKVS();
+                                }
+
                                 Tools.ExecMono("reboot", "");
                             }
                         }

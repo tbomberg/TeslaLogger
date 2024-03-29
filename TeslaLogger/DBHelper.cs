@@ -1689,7 +1689,7 @@ HAVING
                         cmd.Parameters.AddWithValue("@value", value);
                         int done = SQLTracer.TraceNQ(cmd, out _);
 
-                        car.Log($"Update {column} OK: " + done + " - " + value);
+                        //car.Log($"Update {column} OK: " + done + " - " + value);
                     }
                 }
             }
@@ -3460,6 +3460,9 @@ WHERE
 
         public void CloseDriveState(DateTime EndDate)
         {
+            car.Log("CloseDriveState EndDate: " + EndDate.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS));
+
+
             int StartPos = 0;
             int MaxPosId = GetMaxPosid();
             DateTime StartDate = DateTime.MaxValue;
@@ -3482,6 +3485,8 @@ WHERE
                     {
                         StartPos = Convert.ToInt32(dr[0], Tools.ciEnUS);
                         StartDate = (DateTime)(dr[1]);
+
+                        car.Log($"CloseDriveState StartDate: {StartDate.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS)} / StartPos: {StartPos} ");
                     }
                     dr.Close();
                 }
@@ -3516,7 +3521,7 @@ WHERE
 
             if (StartPos != 0)
             {
-                UpdateDriveStatistics(StartPos, MaxPosId);
+                UpdateDriveStatistics(StartPos, MaxPosId, true);
 
                 if (StartDate != DateTime.MaxValue)
                     UpdateAllPOS_AP_Column(car.CarInDB, StartDate, EndDate);
@@ -4006,13 +4011,15 @@ WHERE
             return null;
         }
 
-        private void UpdateDriveStatistics(int startPos, int endPos, bool logging = false)
+        public void UpdateDriveStatistics(int startPos, int endPos, bool logging = false)
         {
             try
             {
+                Tools.SetThreadEnUS();
+
                 if (logging)
                 {
-                    car.Log("UpdateDriveStatistics");
+                    car.Log($"UpdateDriveStatistics StartPos: {startPos} - EndPos: {endPos}");
                 }
 
                 DateTime? startDT = GetDatumFromPos(startPos);
@@ -4023,6 +4030,13 @@ WHERE
                 double TPMS_FR = -1;
                 double TPMS_RL = -1;
                 double TPMS_RR = -1;
+
+
+                if (logging)
+                {
+                    car.Log($"UpdateDriveStatistics startDT: {startDT?.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS)} - endDT: {endDT?.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS)}");
+                }
+
                 if (startDT != null && endDT != null)
                 {
                     GetAutopilotSeconds((DateTime)startDT, (DateTime)endDT, out ap_sec_sum, out ap_sec_max);
@@ -4277,6 +4291,7 @@ WHERE
 
         private void GetAVG_TPMS(DateTime startDT, DateTime endDT, out double tPMS_FL, out double tPMS_FR, out double tPMS_RL, out double tPMS_RR)
         {
+            // car.Log($"GetAVG_TPMS {startDT.ToString()}");
             tPMS_FL = -1;
             tPMS_FR = -1;
             tPMS_RL = -1;
@@ -4291,8 +4306,8 @@ WHERE
                 using (MySqlCommand cmd = new MySqlCommand(@"Select avg(Pressure) as p, Tireid from TPMS 
                         where TPMS.Datum > @startdate and TPMS.Datum < @enddate and TPMS.CarId = @carid group by Tireid", con))
                 {
-                    cmd.Parameters.AddWithValue("@startdate", startDT.AddHours(-1));
-                    cmd.Parameters.AddWithValue("@enddate", startDT.AddHours(1));
+                    cmd.Parameters.AddWithValue("@startdate", startDT.AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS));
+                    cmd.Parameters.AddWithValue("@enddate", startDT.AddHours(1).ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS));
                     cmd.Parameters.AddWithValue("@carid", car.CarInDB);
                     MySqlDataReader dr = SQLTracer.TraceDR(cmd);
                     while (dr.Read())
@@ -4372,6 +4387,10 @@ WHERE
                             try
                             {
                                 int StartPos = Convert.ToInt32(dr[0], Tools.ciEnUS);
+                                
+                                if (dr[1] == DBNull.Value) // unfinished trips won't be updated
+                                    continue;
+
                                 int EndPos = Convert.ToInt32(dr[1], Tools.ciEnUS);
                                 int CarId = Convert.ToInt32(dr[2], Tools.ciEnUS);
 
@@ -4389,7 +4408,7 @@ WHERE
                         }
                     }
 
-                    KVS.InsertOrUpdate("UpdateAllDrivestateData", 1);
+                    KVS.InsertOrUpdate("UpdateAllDrivestateData", 2);
                 }
             }
             catch (Exception ex)
@@ -6637,7 +6656,7 @@ WHERE
             return string.Empty;
         }
 
-        internal List<int> GetSuCChargingStatesWithEmptyChargeSessionId()
+        internal List<int> GetSuCChargingStatesWithEmptySessionId()
         {
             List<int> resultList = new List<int>();
             try
@@ -6651,7 +6670,7 @@ SELECT
 FROM
     chargingstate
 WHERE
-    ChargeSessionId IS NULL
+    sessionId IS NULL
     AND CarID = @CarID
     AND fast_charger_brand = @brand
     AND (fast_charger_type = @type1 OR fast_charger_type = @type2)
@@ -6675,14 +6694,14 @@ WHERE
             catch (Exception ex)
             {
                 ex.ToExceptionless().FirstCarUserID().Submit();
-                Tools.DebugLog($"Exception during DBHelper.GetSuCChargingStatesWithEmptyChargeSessionId(): {ex}");
-                Logfile.ExceptionWriter(ex, "Exception during DBHelper.GetSuCChargingStatesWithEmptyChargeSessionId()");
+                Tools.DebugLog($"Exception during DBHelper.GetSuCChargingStatesWithEmptySessionId(): {ex}");
+                Logfile.ExceptionWriter(ex, "Exception during DBHelper.GetSuCChargingStatesWithEmptySessionId()");
             }
-            Tools.DebugLog($"GetSuCChargingStatesWithEmptyChargeSessionId #{car.CarInDB}:{resultList.Count}");
+            Tools.DebugLog($"GetSuCChargingStatesWithEmptySessionId #{car.CarInDB}:{resultList.Count}");
             return resultList;
         }
 
-        internal List<int> GetSuCChargingStatesWithChargeSessionId()
+        internal List<int> GetSuCChargingStatesWithSessionId()
         {
             List<int> resultList = new List<int>();
             try
@@ -6696,7 +6715,7 @@ SELECT
 FROM
     chargingstate
 WHERE
-    ChargeSessionId IS NOT NULL
+    sessionId IS NOT NULL
     AND CarID = @CarID
     AND fast_charger_brand = @brand
     AND (fast_charger_type = @type1 OR fast_charger_type = @type2)
@@ -6720,10 +6739,10 @@ WHERE
             catch (Exception ex)
             {
                 ex.ToExceptionless().FirstCarUserID().Submit();
-                Tools.DebugLog($"Exception during DBHelper.GetSuCChargingStatesWithChargeSessionId(): {ex}");
-                Logfile.ExceptionWriter(ex, "Exception during DBHelper.GetSuCChargingStatesWithChargeSessionId()");
+                Tools.DebugLog($"Exception during DBHelper.GetSuCChargingStatesWithSessionId(): {ex}");
+                Logfile.ExceptionWriter(ex, "Exception during DBHelper.GetSuCChargingStatesWithSessionId()");
             }
-            Tools.DebugLog($"GetSuCChargingStatesWithChargeSessionId #{car.CarInDB}:{resultList.Count}");
+            Tools.DebugLog($"GetSuCChargingStatesWithSessionId #{car.CarInDB}:{resultList.Count}");
             return resultList;
         }
 
@@ -6937,6 +6956,7 @@ WHERE
 
         public bool GetAutopilotSeconds(DateTime start, DateTime end, out int sumsec, out int maxsec)
         {
+            // car.Log("GetAutopilotSeconds");
             sumsec = -1;
             maxsec = -1;
             try
@@ -6944,38 +6964,50 @@ WHERE
                 if (start < new DateTime(2024, 2, 20)) // feature introduced later
                     return false;
 
+                var svStart = start.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS);
+                var svEnd = end.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS);
+
                 using (MySqlConnection con = new MySqlConnection(DBConnectionstring+ ";Allow User Variables=True"))
                 {
                     con.Open();
-                    using (MySqlCommand cmd = new MySqlCommand(@"select sum(TIME_TO_SEC(TIMEDIFF(enddate, startdate))) as sumsec, max(TIME_TO_SEC(TIMEDIFF(enddate, startdate))) as maxsec from
-                    (
-                    select T1.CarID, T1.date as startdate, T1.state as startstate, T2.date as enddate, T2.state as endstate
-                    from 
-                    (select (@rowid1:=@rowid1 + 1) T1rid, carid, date, state from cruisestate
-                          where carid=@CarID and date between @start and @end order by date
-                        ) as T1
-                        left outer join 
-                        (select (@rowid2:=@rowid2 + 1) T2rid, date, state from  cruisestate
-                          where carid=@CarID and date between @start and @end order by date
-                        ) as T2 on T1rid + 1 = T2rid
-
-                        JOIN (SELECT @rowid1:=0) a
-                        JOIN (SELECT @rowid2:=0) b
-                    ) T3
-                    where startstate = 1 ", con))
+                    using (MySqlCommand cmd = new MySqlCommand($@"select date, state from cruisestate
+                          where carid={car.CarInDB} and date between '{svStart}' and '{svEnd}' and state in (-1,0,1) order by date", con))
                     {
-                        cmd.Parameters.AddWithValue("@CarID", car.CarInDB);
-                        cmd.Parameters.AddWithValue("@start", start);
-                        cmd.Parameters.AddWithValue("@end", end);
+                        // car.Log("SQL: " + cmd.CommandText);
+
+                        DateTime? startstate = null;
+                        double sum = 0;
+                        double max = 0;
+                        int count = 0;
 
                         var dr = cmd.ExecuteReader();
-                        if (dr.Read())
+                        while (dr.Read())
                         {
-                            if (dr["sumsec"] != DBNull.Value)
-                                sumsec = Convert.ToInt32(dr["sumsec"]);
+                            count++;
+                            DateTime date = dr.GetDateTime(0);
+                            int state = dr.GetInt32(1);
 
-                            if (dr["maxsec"] != DBNull.Value)
-                                maxsec = Convert.ToInt32(dr["maxsec"]);
+                            if (startstate == null && state == 1)
+                            {
+                                startstate = date;
+                            }
+                            else if (startstate != null &&  state != 1)
+                            {
+                                TimeSpan ts = date - (DateTime)startstate;
+                                double tssec = ts.TotalSeconds;
+
+                                sum += tssec;
+                                max = Math.Max(tssec, max);
+
+                                startstate = null;
+                                // System.Diagnostics.Debug.WriteLine("Sec: " + tssec);
+                            }
+                        }
+
+                        if (count > 0)
+                        {
+                            sumsec = (Int32)sum;
+                            maxsec = (Int32)max;
                             return true;
                         }
                     }
@@ -6993,6 +7025,8 @@ WHERE
         {
             try
             {
+                Tools.SetThreadEnUS();
+
                 using (MySqlConnection con = new MySqlConnection(DBConnectionstring + ";Allow User Variables=True"))
                 {
                     con.Open();
@@ -7010,8 +7044,8 @@ WHERE
                         JOIN (SELECT @rowid2:=0) b", con))
                     {
                         cmd.Parameters.AddWithValue("@carid", carid);
-                        cmd.Parameters.AddWithValue("@start", start);
-                        cmd.Parameters.AddWithValue("@end", end);
+                        cmd.Parameters.AddWithValue("@start", start.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS));
+                        cmd.Parameters.AddWithValue("@end", end.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS));
 
                         var dr = cmd.ExecuteReader();
                         while (dr.Read())
@@ -7029,8 +7063,8 @@ WHERE
                                     {
                                         cmd2.Parameters.AddWithValue("@carid", carid);
                                         cmd2.Parameters.AddWithValue("@ap", state);
-                                        cmd2.Parameters.AddWithValue("@start", startstate);
-                                        cmd2.Parameters.AddWithValue("@end", endstate);
+                                        cmd2.Parameters.AddWithValue("@start", startstate.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS));
+                                        cmd2.Parameters.AddWithValue("@end", endstate.ToString("yyyy-MM-dd HH:mm:ss", Tools.ciEnUS));
                                         cmd2.ExecuteNonQuery();
                                     }
                                 }

@@ -12,6 +12,7 @@ using MySql.Data.MySqlClient;
 using System.Configuration;
 using System.Reflection;
 using System.IO;
+using System.Runtime.ConstrainedExecution;
 
 namespace TeslaLogger
 {
@@ -290,11 +291,19 @@ namespace TeslaLogger
                                     case "On":
                                         state = 1;
                                         break;
+                                    case "Override":
+                                        state = 2;
+                                        break;
                                     case "Standby":
                                         state = -1;
                                         break;
+                                    case "Standstill":
+                                        state = -2;
+                                        break;
                                     default:
+                                        state = -99;
                                         car.Log("Unhandled Cruise State: " + v1);
+                                        car.CreateExeptionlessLog("CruiseStateUnhandled", v1, Exceptionless.Logging.LogLevel.Warn).Submit();
                                         break;
                                 }
 
@@ -309,6 +318,8 @@ namespace TeslaLogger
                                         cmd.Parameters.AddWithValue("@date", d);
                                         cmd.Parameters.AddWithValue("@state", state);
                                         cmd.ExecuteNonQuery();
+
+                                        car.Log("Telemetry Server: Cruise State");
                                     }
                                 }
                             }
@@ -329,6 +340,10 @@ namespace TeslaLogger
                 var cols = new string[] {"PackVoltage", "PackCurrent", "IsolationResistance", "NumBrickVoltageMax", "BrickVoltageMax",
                 "NumBrickVoltageMin", "BrickVoltageMin", "ModuleTempMax", "ModuleTempMin", "LifetimeEnergyUsed", "LifetimeEnergyUsedDrive"};
 
+                double? BrickVoltageMin = null;
+                double? BrickVoltageMax = null;
+                bool currentJSONUpdated = false;
+
                 using (var cmd = new MySqlCommand())
                 {
                     foreach (dynamic jj in j)
@@ -336,23 +351,46 @@ namespace TeslaLogger
                         string key = jj["key"];
                         if (cols.Any(key.Contains))
                         {
-                            string name = jj["key"];
                             dynamic value = jj["value"];
                             if (value.ContainsKey("stringValue"))
                             {
                                 string v1 = value["stringValue"];
                                 double d = double.Parse(v1, Tools.ciEnUS);
-                                cmd.Parameters.AddWithValue("@" + name, d);
+                                cmd.Parameters.AddWithValue("@" + key, d);
 
                                 if (key == "ModuleTempMin")
                                 {
                                     System.Diagnostics.Debug.WriteLine("ModuleTempMin: " + d);
                                     car.CurrentJSON.lastScanMyTeslaReceived = DateTime.Now;
                                     car.CurrentJSON.SMTCellTempAvg = d;
-                                    car.CurrentJSON.CreateCurrentJSON();
+                                    currentJSONUpdated = true;
+                                }
+                                else if (key == "BrickVoltageMin")
+                                {
+                                    System.Diagnostics.Debug.WriteLine("BrickVoltageMin: " + d);
+                                    car.CurrentJSON.lastScanMyTeslaReceived = DateTime.Now;
+                                    car.CurrentJSON.SMTCellMinV = d;
+                                    currentJSONUpdated = true;
+                                    BrickVoltageMin = d;
+                                }
+                                else if (key == "BrickVoltageMax")
+                                {
+                                    System.Diagnostics.Debug.WriteLine("BrickVoltageMax: " + d);
+                                    car.CurrentJSON.lastScanMyTeslaReceived = DateTime.Now;
+                                    car.CurrentJSON.SMTCellMaxV = d;
+                                    currentJSONUpdated = true;
+                                    BrickVoltageMax = d;
                                 }
                             }
                         }
+                    }
+
+                    if (currentJSONUpdated)
+                    {
+                        if (BrickVoltageMax.HasValue && BrickVoltageMin.HasValue)
+                            car.CurrentJSON.SMTCellImbalance = (BrickVoltageMax - BrickVoltageMin) * 1000.0;
+
+                        car.CurrentJSON.CreateCurrentJSON();
                     }
 
                     if (cmd.Parameters.Count > 0)
@@ -422,11 +460,13 @@ namespace TeslaLogger
                 {
                     car.Log("Connect to Telemetry Server Error: " + ex2.InnerException.Message);
                     car.CreateExceptionlessClient(ex2).Submit();
+                    Thread.Sleep(60000);
                 }
                 else
                 {
                     car.Log("Connect to Telemetry Server Error: " + ex.Message);
                     car.CreateExceptionlessClient(ex).Submit();
+                    Thread.Sleep(60000);
                 }
             }
         }
