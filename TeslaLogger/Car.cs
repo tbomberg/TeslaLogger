@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -239,7 +238,7 @@ namespace TeslaLogger
                     this.TeslaPasswort = TeslaPasswort;
                     this.CarInAccount = CarInAccount;
                     this.CarInDB = CarInDB;
-                    this.Tesla_Token = TeslaToken;
+                    this.Tesla_Token = StringCipher.Decrypt(TeslaToken);
                     this.Tesla_Token_Expire = TeslaTokenExpire;
                     this.ModelName = ModelName;
                     this.CarType = cartype;
@@ -823,9 +822,27 @@ namespace TeslaLogger
                             SetCurrentState(TeslaState.Start);
                             lastCarUsed = DateTime.Now;
                         }
+
+                        var srt = webhelper.startRequestTimeout;
+                        if (srt != null && srt.Value.AddMinutes(15) < DateTime.UtcNow)
+                        {
+                            Log("Car is sleeping because of 408");
+                            SetCurrentState(TeslaState.Sleep);
+                            lastCarUsed = DateTime.Now;
+                            DbHelper.StartState("asleep");
+                        }
                     }
                     else
                     {
+                        var srt = webhelper.startRequestTimeout;
+                        if (srt != null && srt.Value.AddMinutes(15) < DateTime.UtcNow)
+                        {
+                            Log("Car is sleeping because of 408");
+                            SetCurrentState(TeslaState.Sleep);
+                            lastCarUsed = DateTime.Now;
+                            DbHelper.StartState("asleep");
+                        }
+
                         // wenn er 15 min online war und nicht geladen oder gefahren ist, dann muss man ihn die möglichkeit geben offline zu gehen
                         TimeSpan ts = DateTime.Now - lastCarUsed;
                         if (ts.TotalMinutes > Program.KeepOnlineMinAfterUsage)
@@ -1942,6 +1959,103 @@ id = @carid", con))
             }
 
 
+            return false;
+        }
+
+        internal bool FirmwareAtLeastVersion(string fw)
+        {
+            // parse car's firmware
+            if (GetTeslaAPIState().GetString("car_version", out string carFW))
+            {
+                if (carFW.Contains(" "))
+                {
+                    carFW = carFW.Split(' ')[0];
+                }
+                int year = 0;
+                int week = 0;
+                int version = 0;
+                int patch = 0;
+                if (carFW.Split('.').Length > 0)
+                {
+                    if (carFW.Split('.').Length > 2)
+                    {
+                        year = int.Parse(carFW.Split('.')[0]);
+                        week = int.Parse(carFW.Split('.')[1]);
+                        version = int.Parse(carFW.Split('.')[2]);
+                    }
+                    if (carFW.Split('.').Length == 4)
+                    {
+                        patch = int.Parse(carFW.Split('.')[3]);
+                    }
+                }
+                //Tools.DebugLog($"#{CarInDB} carFW year:{year} week:{week} version:{version} patch:{patch}");
+                // parse firmware version to compare
+                if (fw.Split('.').Length > 0)
+                {
+                    if (int.Parse(fw.Split('.')[0]) < year)
+                    {
+                        // car's FW year is newer than reference year
+                        return true;
+                    }
+                    else if (int.Parse(fw.Split('.')[0]) > year)
+                    {
+                        // car's FW year is older than reference year
+                        return false;
+                    }
+                    else if (int.Parse(fw.Split('.')[0]) == year)
+                    {
+                        // car's FW year is equal to reference year --> compare week
+                        if (int.Parse(fw.Split('.')[1]) < week)
+                        {
+                            // car's FW week is newer than reference week
+                            return true;
+                        }
+                        else if (int.Parse(fw.Split('.')[1]) > week)
+                        {
+                            // car's FW week is older than reference week
+                            return false;
+                        }
+                        else if (int.Parse(fw.Split('.')[1]) == week)
+                        {
+                            // car's FW week is equal to reference week --> compare version
+                            if (int.Parse(fw.Split('.')[2]) < version)
+                            {
+                                // car's FW version is newer than reference version
+                                return true;
+                            }
+                            else if (int.Parse(fw.Split('.')[2]) > version)
+                            {
+                                // car's FW version is older than reference version
+                                return false;
+                            }
+                            else if (int.Parse(fw.Split('.')[2]) == version)
+                            {
+                                // car's FW version is equal to reference version --> compare patch
+                                // do we have a patch?
+                                if (fw.Split('.').Length > 3)
+                                {
+                                    if (int.Parse(fw.Split('.')[3]) <= patch)
+                                    {
+                                        // car's FW patch is newer or equal to than reference patch
+                                        return true;
+                                    }
+                                    else if (int.Parse(fw.Split('.')[3]) > patch)
+                                    {
+                                        // car's FW patch is older than reference patch
+                                        return false;
+                                    }
+                                }
+                                else
+                                {
+                                    // year, week and version are equal, so we have at least the required firmware
+                                    return true;
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
             return false;
         }
     }   

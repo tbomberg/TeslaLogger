@@ -166,7 +166,9 @@ Supercharger-V3 DE-Berlin Parkhaus Gleisdreieck, 52.501800,13.373985
 Supercharger DE-Bernau am Chiemsee, 47.81445, 12.36792
 Supercharger DE-Bersteland, 51.949066, 13.787906
 Supercharger DE-Bispingen, 53.104326, 9.981842
+Supercharger-V3 DE-Bispingen-Behringen, 53.0998617, 9.9791921, 75
 Supercharger-V3 DE-Bissendorf,52.238354,8.162975
+Supercharger-V3 DE-Bitterfeld, 51.636730, 12.200673
 Supercharger DE-Blankenfelde-Mahlow, 52.3089548, 13.444767
 Supercharger-V3 DE-Blankenfelde-Mahlow, 52.308865, 13.443957, 25
 Supercharger-V3 DE-Bochum - Ruhr Park, 51.49506,7.28483
@@ -201,6 +203,7 @@ Supercharger-V3 DE-Geiselwind, 49.769742,10.470259, 50
 Supercharger-V3 DE-Gelnhausen,50.188644,9.186141
 Supercharger-V3 DE-Gensingen, 49.90202, 7.929759
 Supercharger-V4 DE-Gigafactory Berlin-Brandenburg, 52.391, 13.796778
+Supercharger-V4 DE-Gigafactory Berlin-Brandenburg, 52.391321, 13.796042
 Supercharger DE-Gramschatzer Wald, 49.91202, 10.00176, 30
 Supercharger-V3 DE-Gramschatzer Wald, 49.912304,10.000582, 30
 Supercharger-V3 DE-Greding,49.041979,11.342705,20
@@ -210,6 +213,7 @@ Supercharger-V3 DE-Hamburg - Stillhorn, 53.479701, 10.025150
 Supercharger-V3 DE-Hamburg-Wandsbek, 53.586773, 10.098058
 Supercharger-V3 DE-Hanau, 50.104919, 8.916077, 30
 Supercharger-V3 DE-Hannover, 52.423275,9.835039, 20
+Supercharger-V3 DE-Hattersheim - Globus, 50.071139, 8.475361, 35
 Supercharger-V3 DE-Heede, 52.985372, 7.248233
 Supercharger-V3 DE-Hemsbach, 49.594071, 8.632455, 30
 Supercharger DE-Hengersberg, 48.76555, 13.04668
@@ -389,7 +393,7 @@ Supercharger-V3 DK-Maribo, 54.779188, 11.477063, 40
 Supercharger DK-Middelfart, 55.511311, 9.765029
 Supercharger DK-Nørre Alslev, 54.899872, 11.896921
 Supercharger-V3 DK-Nykøbing Mors, 56.788618, 8.828769
-Supercharger-V3 DK-Odense, 55.384464, 10.427848
+Supercharger-V3 DK-Odense, 55.3857359, 10.4270555, 75
 Supercharger DK-Randers, 56.433685, 10.055412
 Supercharger DK-Rødekro, 55.067331, 9.361081, 20
 Supercharger DK-Rødekro, 55.068085, 9.360869, 20
@@ -908,7 +912,7 @@ Supercharger SE-Gäddede, 64.5065, 14.1435
 Supercharger SE-Gävle, 60.648513, 17.120583
 Supercharger-V3 SE-Gothenburg South, 57.6519635, 11.9512471
 Supercharger-V3 SE-Haninge, 59.1810494, 18.16069
-Supercharger-V3 SE-Helsingborg, 56.091, 12.76455
+Supercharger-V3 SE-Helsingborg, 56.091, 12.76455, 125
 Supercharger-V3 SE-Hogstorp, 58.393909, 11.757387
 Supercharger SE-Hudiksvall, 61.714854, 17.042692
 Supercharger SE-Jung, 58.328002, 13.132237
@@ -4967,6 +4971,8 @@ EnBW DE-Öhringen Euronics, 49.20321, 9.491336
 EnBW DE-Öhringen Meisterhausstr., 49.20465, 9.50171
 EnBW DE-Öhringen Siemensstraße, 49.207153, 9.480891
 EnBW DE-Überlingen Lippersreuther Str., 47.770249, 9.172718
+
+ENGIE FR-Aire du Val de Meuse, 47.975545,5.498574
 
 EVM DE-Cochem Bahnhofsvorplatz, 50.153328, 7.167515
 EVM DE-Koblenz Altstadt, 50.359981, 7.598084
