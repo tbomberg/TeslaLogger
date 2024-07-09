@@ -19,6 +19,7 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.Caching;
 using System.Runtime.CompilerServices;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -32,6 +33,7 @@ namespace TeslaLogger
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Keine allgemeinen Ausnahmetypen abfangen", Justification = "<Pending>")]
     public class WebHelper : IDisposable
     {
+        public const string vehicle_data_everything = "vehicle_data?endpoints=drive_state%3Blocation_data%3Bclimate_state%3Bvehicle_state%3Bcharge_state%3Bvehicle_config&let_sleep=true";
         public string apiaddress
         {
             get
@@ -109,7 +111,11 @@ namespace TeslaLogger
         DateTime lastRefreshToken = DateTime.MinValue;
         DateTime nextTeslaTokenFromRefreshToken = DateTime.MaxValue;
 
-        int commandCounter = 0;
+        internal int commandCounter = 0;
+        internal int commandCounterDrive = 0;
+        internal int commandCounterCharging = 0;
+        internal int commandcounterOnline = 0;
+        int commandCounterDay = DateTime.UtcNow.Day;
 
         protected virtual void Dispose(bool disposing)
         {
@@ -161,6 +167,24 @@ namespace TeslaLogger
         {
             this.car = car;
 
+            if (KVS.Get($"commandCounter_{car.CarInDB}", out commandCounter) == KVS.NOT_FOUND)
+                commandCounter = 0;
+
+            if (KVS.Get($"commandCounterDrive_{car.CarInDB}", out commandCounterDrive) == KVS.NOT_FOUND)
+                commandCounterDrive = 0;
+
+            if (KVS.Get($"commandCounterCharging_{car.CarInDB}", out commandCounterCharging) == KVS.NOT_FOUND)
+                commandCounterCharging = 0;
+
+            if (KVS.Get($"commandCounterOnline_{car.CarInDB}", out commandcounterOnline) == KVS.NOT_FOUND)
+                commandcounterOnline = 0;
+
+            if (KVS.Get($"commandCounterDay{car.CarInDB}", out commandCounterDay) == KVS.NOT_FOUND)
+                commandCounterDay = DateTime.UtcNow.Day;
+
+            ResetCommandCounterEveryDay();
+
+
             httpclient_teslalogger_de.DefaultRequestHeaders.ConnectionClose = true;
             ProductInfoHeaderValue userAgent = new ProductInfoHeaderValue("Teslalogger", Assembly.GetExecutingAssembly().GetName().Version.ToString());
             httpclient_teslalogger_de.DefaultRequestHeaders.UserAgent.Add(userAgent);
@@ -184,7 +208,7 @@ namespace TeslaLogger
                 {
                     DateTime start = DateTime.UtcNow;
                     reply = client.DownloadString("https://teslalogger.de/tasker_date.php?t=" + car.TaskerHash);
-                    DBHelper.AddMothershipDataToDB("tasker_date.php", start, 200);
+                    DBHelper.AddMothershipDataToDB("tasker_date.php", start, 200, car.CarInDB);
 
                     if (reply.Contains("not found") || reply.Contains("never!"))
                     {
@@ -446,7 +470,7 @@ namespace TeslaLogger
 
                     if (getTokenDebugVerbose) Log("GetToken resultContent Regex Matches:" + m.Count);
 
-                    DBHelper.AddMothershipDataToDB("GetTokenAsync()", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("GetTokenAsync()", start, (int)result.StatusCode, car.CarInDB);
 
                     if (resultContent.Contains("authorization_required"))
                     {
@@ -568,7 +592,7 @@ namespace TeslaLogger
                             HttpResponseMessage result = client.PostAsync(new Uri(authHost + "/oauth2/v3/token"), content).Result;
                             resultContent = result.Content.ReadAsStringAsync().Result;
 
-                            DBHelper.AddMothershipDataToDB("UpdateTeslaTokenFromRefreshToken()", start, (int)result.StatusCode);
+                            DBHelper.AddMothershipDataToDB("UpdateTeslaTokenFromRefreshToken()", start, (int)result.StatusCode, car.CarInDB);
 
                             HttpStatusCode = (int)result.StatusCode;
 
@@ -1094,7 +1118,7 @@ namespace TeslaLogger
                         car.Log("Your account has been locked !!!");
                     }
 
-                    DBHelper.AddMothershipDataToDB("GetTokenAsync2()", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("GetTokenAsync2()", start, (int)result.StatusCode, car.CarInDB);
 
                     Uri location = result.Headers.Location;
 
@@ -1354,7 +1378,7 @@ namespace TeslaLogger
 
                 LogGetToken(resultContent, "MFA2");
 
-                DBHelper.AddMothershipDataToDB("MFA2()", start, (int)result.StatusCode);
+                DBHelper.AddMothershipDataToDB("MFA2()", start, (int)result.StatusCode, car.CarInDB);
 
                 try
                 {
@@ -1413,7 +1437,7 @@ namespace TeslaLogger
 
                 LogGetToken(resultContent, "MFA3");
 
-                DBHelper.AddMothershipDataToDB("MFA3()", start, (int)result.StatusCode);
+                DBHelper.AddMothershipDataToDB("MFA3()", start, (int)result.StatusCode, car.CarInDB);
 
                 Uri location = result.Headers.Location;
 
@@ -1461,7 +1485,7 @@ namespace TeslaLogger
                     LogGetToken(resultContent, "GetTokenAsync3");
 
 
-                    DBHelper.AddMothershipDataToDB("GetTokenAsync3()", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("GetTokenAsync3()", start, (int)result.StatusCode, car.CarInDB);
 
                     // car.Log("HttpStatus: " + result.StatusCode.ToString());
 
@@ -1532,7 +1556,7 @@ namespace TeslaLogger
                     resultContent = result.Content.ReadAsStringAsync().Result;
                     LogGetToken(resultContent, "GetTokenAsync4");
 
-                    DBHelper.AddMothershipDataToDB("GetTokenAsync4()", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("GetTokenAsync4()", start, (int)result.StatusCode, car.CarInDB);
 
                     car.Log("HttpStatus: " + result.StatusCode.ToString());
 
@@ -1582,11 +1606,15 @@ namespace TeslaLogger
 
         internal bool IsCharging(bool justCheck = false, bool noMemcache = false)
         {
+            if (car.FleetAPI && justCheck) {
+                return car.telemetry?.IsCharging ?? false;    
+            }   
+
             string resultContent = "";
             try
             {
                 // resultContent = GetCommand("charge_state").Result;
-                resultContent = GetCommand("vehicle_data?endpoints=charge_state&let_sleep=true", noMemcache).Result;
+                resultContent = GetCommand(vehicle_data_everything).Result;
 
                 if (resultContent == INSERVICE)
                 {
@@ -1874,6 +1902,9 @@ namespace TeslaLogger
                     {
                         if (resultContent != null)
                             car.Log("GetVehicles: " + resultContent);
+
+                        car.CurrentJSON.FatalError = "Car not found!";
+                        car.CurrentJSON.CreateCurrentJSON();
 
                         return "NULL";
                     }
@@ -2228,7 +2259,7 @@ namespace TeslaLogger
                 // resultContent = Tools.ConvertBase64toString("eyJSZXNwb25zZSI6bnVsbCwiRXJyb3IgZGVzY3JpcHRpb24iOiIiLCJFcnJvciI6Im5vdCBmb3VuZCJ9"); // {"Response":null,"Error description":"","Error":"not found"}
 
                 _ = car.GetTeslaAPIState().ParseAPI(resultContent, "vehicles");
-                DBHelper.AddMothershipDataToDB("GetVehicles()", start, (int)result.StatusCode);
+                DBHelper.AddMothershipDataToDB("GetVehicles()", start, (int)result.StatusCode, car.CarInDB);
 
                 if (TeslaAPI_Commands.ContainsKey("vehicles"))
                 {
@@ -2279,6 +2310,14 @@ namespace TeslaLogger
                     {
                         nextTeslaTokenFromRefreshToken = DateTime.UtcNow.AddMinutes(5);
                         UpdateTeslaTokenFromRefreshToken();
+                    }
+
+                    if (car.FleetAPI)
+                    {
+                        if (car.telemetry?.IsOnline() == true)
+                            return "online";
+                        else
+                            return "asleep";
                     }
 
 
@@ -2357,11 +2396,11 @@ namespace TeslaLogger
                 {
                     if (result.IsSuccessStatusCode)
                     {
-                        DBHelper.AddMothershipDataToDB("IsOnline()", start, (int)result.StatusCode);
+                        DBHelper.AddMothershipDataToDB("IsOnline()", start, (int)result.StatusCode, car.CarInDB);
                     }
                     else
                     {
-                        DBHelper.AddMothershipDataToDB("IsOnline()", -1, (int)result.StatusCode);
+                        DBHelper.AddMothershipDataToDB("IsOnline()", -1, (int)result.StatusCode, car.CarInDB);
                     }
                 }
 
@@ -2560,7 +2599,8 @@ namespace TeslaLogger
             try
             {
                 // resultContent2 = GetCommand("vehicle_config").Result;
-                resultContent2 = GetCommand("vehicle_data?endpoints=vehicle_config&let_sleep=true").Result;
+                // resultContent2 = GetCommand("vehicle_data?endpoints=vehicle_config&let_sleep=true").Result;
+                resultContent2 = GetCommand(vehicle_data_everything).Result;
 
                 if (resultContent2 == INSERVICE || resultContent2 == "NULL")
                 {
@@ -3215,12 +3255,20 @@ namespace TeslaLogger
 
         public bool IsDriving(bool justinsertdb = false)
         {
+            if (car.FleetAPI && !justinsertdb)
+            {
+                if (car.telemetry?.Driving == false)
+                { 
+                    return false; 
+                }
+            }
+
             string resultContent = "";
             try
             {
                 if (car.FirmwareAtLeastVersion("2023.38.4"))
                 {
-                    resultContent = GetCommand("vehicle_data?endpoints=drive_state%3Blocation_data&let_sleep=true").Result;
+                    resultContent = GetCommand(vehicle_data_everything).Result;
                 }
                 else
                 {
@@ -3271,7 +3319,7 @@ namespace TeslaLogger
                 else
                 {
                     // New API after 2023.38.4 
-                    var rc2 = GetCommand("vehicle_data?endpoints=location_data&let_sleep=true").Result;
+                    var rc2 = GetCommand(vehicle_data_everything).Result;
                     if (rc2 == null)
                         return false;
                     try
@@ -3368,6 +3416,12 @@ namespace TeslaLogger
                     }
 
                     _ = SendDataToAbetterrouteplannerAsync(ts, battery_level, speed, false, power, (double)dLatitude, (double)dLongitude);
+
+                    if (car.FleetAPI && !justinsertdb)
+                    {
+                        latitude = 0;
+                        longitude = 0;
+                    }
 
                     car.DbHelper.InsertPos(ts.ToString(), latitude, longitude, speed, power, odometer.Result, ideal_battery_range_km, battery_range_km, battery_level, outside_temp, elevation);
 
@@ -3928,7 +3982,7 @@ namespace TeslaLogger
 
                     DateTime start = DateTime.UtcNow;
                     resultContent = await webClient.DownloadStringTaskAsync(new Uri(url));
-                    DBHelper.AddMothershipDataToDB("ReverseGeocoding", start, 0);
+                    DBHelper.AddMothershipDataToDB("ReverseGeocoding", start, 0, c.CarInDB);
 
                     dynamic jsonResult = JsonConvert.DeserializeObject(resultContent);
                     string adresse = "";
@@ -4119,7 +4173,7 @@ namespace TeslaLogger
 
                     DateTime start = DateTime.UtcNow;
                     resultContent = await webClient.DownloadStringTaskAsync(new Uri(url));
-                    DBHelper.AddMothershipDataToDB("ReverseGeocoding", start, 0);
+                    DBHelper.AddMothershipDataToDB("ReverseGeocoding", start, 0, 0);
 
                     dynamic jsonResult = JsonConvert.DeserializeObject(resultContent);
 
@@ -4505,7 +4559,8 @@ DESC", con))
             try
             {
                 // resultContent = GetCommand("charge_state").Result;
-                resultContent = GetCommand("vehicle_data?endpoints=charge_state&let_sleep=true").Result;
+                // resultContent = GetCommand("vehicle_data?endpoints=charge_state&let_sleep=true").Result;
+                resultContent = GetCommand(vehicle_data_everything).Result;
 
                 if (resultContent == null || resultContent == "NULL")
                     return -1;
@@ -4566,7 +4621,8 @@ DESC", con))
             try
             {
                 // resultContent = await GetCommand("vehicle_state");
-                resultContent = await GetCommand("vehicle_data?endpoints=vehicle_state&let_sleep=true");
+                resultContent = await GetCommand(vehicle_data_everything);
+
                 Tools.SetThreadEnUS();
 
                 if (resultContent == null || resultContent == "NULL" || resultContent == INSERVICE)
@@ -4662,7 +4718,9 @@ DESC", con))
             try
             {
                 // resultContent = await GetCommand("climate_state");
-                resultContent = GetCommand("vehicle_data?endpoints=climate_state&let_sleep=true").Result;
+
+                resultContent = GetCommand(vehicle_data_everything).Result;
+
                 if (resultContent == null || resultContent.Length == 0 || resultContent == "NULL")
                 {
                     Log("GetOutsideTempAsync: NULL");
@@ -4778,6 +4836,8 @@ DESC", con))
                     Tools.DebugLog($"GetCommand #{car.CarInDB} request: {adresse}");
                     HttpResponseMessage result = await httpClientTeslaAPI.SendAsync(request);
 
+                    car.Log("Command: " + cmd + " [" + commandCounter + "]");
+
                     if (result.IsSuccessStatusCode)
                     {
                         startRequestTimeout = null;
@@ -4791,7 +4851,7 @@ DESC", con))
                             MemoryCache.Default.Add(cacheKey, resultContent, DateTime.Now.AddSeconds(4));
                         }
 
-                        DBHelper.AddMothershipDataToDB("GetCommand(" + cmd + ")", start, (int)result.StatusCode);
+                        DBHelper.AddMothershipDataToDB("GetCommand(" + cmd + ")", start, (int)result.StatusCode, car.CarInDB);
                         _ = car.GetTeslaAPIState().ParseAPI(resultContent, cmd);
                         if (TeslaAPI_Commands.ContainsKey(cmd))
                         {
@@ -4808,14 +4868,33 @@ DESC", con))
                             Log("ratelimit-remaining: " + v2.First());
                         */
 
+                        ResetCommandCounterEveryDay();
+
                         commandCounter++;
+                        KVS.InsertOrUpdate($"commandCounter_{car.CarInDB}", commandCounter);
+
+                        switch (car.GetCurrentState())
+                        {
+                            case TeslaState.Drive:
+                                commandCounterDrive++;
+                                KVS.InsertOrUpdate($"commandCounterDrive_{car.CarInDB}", commandCounterDrive);
+                                break;
+                            case TeslaState.Charge:
+                                commandCounterCharging++;
+                                KVS.InsertOrUpdate($"commandCounterCharging_{car.CarInDB}", commandCounterCharging);
+                                break;
+                            default:
+                                commandcounterOnline++;
+                                KVS.InsertOrUpdate($"commandCounterOnline_{car.CarInDB}", commandcounterOnline);
+                                break;
+                        }
 
                         if (commandCounter % 100 == 0)
                             Log("Command counter: " + commandCounter);
 
                         return resultContent;
                     }
-                    DBHelper.AddMothershipDataToDB("GetCommand(" + cmd + ")", double.Parse("-1." + (int)result.StatusCode, Tools.ciEnUS), (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("GetCommand(" + cmd + ")", double.Parse("-1." + (int)result.StatusCode, Tools.ciEnUS), (int)result.StatusCode, car.CarInDB);
                     if (result.StatusCode == HttpStatusCode.Unauthorized)
                     {
                         LoginRetry(result);
@@ -4867,7 +4946,8 @@ DESC", con))
                         {
                             sleep = (random.Next(5000) + 60000) * 1000;
                         }
-                        string l = "Result.Statuscode: " + (int)result.StatusCode + " (" + result.StatusCode.ToString() + ") cmd: " + cmd + " Sleep: " + sleep + "ms";
+                        string l1 = "Result.Statuscode: " + (int)result.StatusCode + " (" + result.StatusCode.ToString() + ") cmd: " + cmd + " Sleep: " + sleep + "ms";
+                        string l = "";
 
                         if (result.Headers.TryGetValues("ratelimit-limit", out var v))
                             l += ", ratelimit-limit: " + v.First();
@@ -4880,8 +4960,21 @@ DESC", con))
 
                         l += ", sleep till: "+ DateTime.Now.AddMilliseconds(sleep).ToString(Tools.ciDeDE);
 
-                        Log(l);
+                        l += $", CommandCounter: {commandCounter} Drive: {commandCounterDrive} Charge: {commandCounterCharging} Online: {commandcounterOnline}";
+
+                        if (car.FleetAPI)
+                            l += ", FleetAPI";
+                        else
+                            l += ", OwnersAPI";
+
+                        car.CreateExeptionlessLog("TooManyRequests", l, LogLevel.Warn).Submit();
+
+                        Log(l1+l);
+                        car.CurrentJSON.FatalError += " TooManyRequests";
+                        car.CurrentJSON.CreateCurrentJSON();
                         Thread.Sleep(sleep);
+                        car.CurrentJSON.FatalError = car.CurrentJSON.FatalError.Replace(" TooManyRequests", "");
+                        car.CurrentJSON.CreateCurrentJSON();
                     }
                     else
                     {
@@ -4900,6 +4993,24 @@ DESC", con))
             }
 
             return "NULL";
+        }
+
+        private void ResetCommandCounterEveryDay()
+        {
+            if (DateTime.UtcNow.Day != commandCounterDay)
+            {
+                commandCounterDay = DateTime.UtcNow.Day;
+                Log($"Total Commands Today: {commandCounter} Drive: {commandCounterDrive} Charge: {commandCounterCharging} Online: {commandcounterOnline}");
+                commandCounter = 0;
+                commandCounterDrive = 0;
+                commandCounterCharging = 0;
+                commandcounterOnline = 0;
+                KVS.InsertOrUpdate($"commandCounter_{car.CarInDB}", commandCounter);
+                KVS.InsertOrUpdate($"commandCounterDrive_{car.CarInDB}", commandCounterDrive);
+                KVS.InsertOrUpdate($"commandCounterCharging_{car.CarInDB}", commandCounterCharging);
+                KVS.InsertOrUpdate($"commandCounterOnline_{car.CarInDB}", commandcounterOnline);
+                KVS.InsertOrUpdate($"commandCounterDay{car.CarInDB}", commandCounterDay);
+            }
         }
 
         public bool LoginRetry(HttpResponseMessage result)
@@ -4966,7 +5077,7 @@ DESC", con))
                 StringContent queryString = new StringContent(data, Encoding.UTF8, "application/json");
                 HttpResponseMessage result = await client.PostAsync(adresse, queryString);
                 resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
-                DBHelper.AddMothershipDataToDB("GetCommand(nearby_charging_sites)", start, (int)result.StatusCode);
+                DBHelper.AddMothershipDataToDB("GetCommand(nearby_charging_sites)", start, (int)result.StatusCode, car.CarInDB);
 
                 if (!result.IsSuccessStatusCode)
                 {
@@ -5008,7 +5119,7 @@ DESC", con))
                     DateTime start = DateTime.UtcNow;
                     HttpResponseMessage result = await httpclientgetChargingHistoryV2.SendAsync(request);
                     resultContent = await result.Content.ReadAsStringAsync();
-                    DBHelper.AddMothershipDataToDB("GetChargingHistoryV2", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("GetChargingHistoryV2", start, (int)result.StatusCode, car.CarInDB);
 
                     if (!result.IsSuccessStatusCode)
                     {
@@ -5050,7 +5161,7 @@ DESC", con))
                     DateTime start = DateTime.UtcNow;
                     HttpResponseMessage result = await httpclientgetChargingHistoryIonvoicePDF.SendAsync(request);
                     PDF = await result.Content.ReadAsByteArrayAsync();
-                    DBHelper.AddMothershipDataToDB("GetChargingHistoryInvoicePDF", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("GetChargingHistoryInvoicePDF", start, (int)result.StatusCode, car.CarInDB);
 
                     if (!result.IsSuccessStatusCode)
                     {
@@ -5114,7 +5225,7 @@ DESC", con))
                     request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
                     HttpResponseMessage result = await httpClientTeslaAPI.SendAsync(request);
                     resultContent = await result.Content.ReadAsStringAsync();
-                    DBHelper.AddMothershipDataToDB("PostCommand(" + cmd + ")", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("PostCommand(" + cmd + ")", start, (int)result.StatusCode, car.CarInDB);
                     int position = cmd.LastIndexOf('/');
                     if (position > -1)
                     {
@@ -5340,7 +5451,7 @@ DESC", con))
                     HttpResponseMessage result = resultTask.Result;
                     string resultContent = result.Content.ReadAsStringAsync().Result;
 
-                    DBHelper.AddMothershipDataToDB("teslalogger.de/wakefile.php", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("teslalogger.de/wakefile.php", start, (int)result.StatusCode, car.CarInDB);
 
                     if (resultContent.Contains("wakeupfile"))
                     {
@@ -5505,7 +5616,7 @@ DESC", con))
                 {
                     var result = await httpClientABRP.PostAsync("https://api.iternio.com/1/tlm/send?token=" + car.ABRPToken + "&tlm=" + json, null);
 
-                    DBHelper.AddMothershipDataToDB("SendDataToAbetterrouteplanner", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("SendDataToAbetterrouteplanner", start, (int)result.StatusCode, car.CarInDB);
                     if (result.StatusCode == HttpStatusCode.Unauthorized)
                     {
                         string response = result.Content.ReadAsStringAsync().Result;
@@ -5601,7 +5712,7 @@ DESC", con))
                     var result = await httpClientSuCBingo.PostAsync(new Uri("https://supercharge.bingo/v1.php/api/v1/checkin"), content).ConfigureAwait(false);
                     string response = result.Content.ReadAsStringAsync().Result;
 
-                    DBHelper.AddMothershipDataToDB("SuperchargeBingoCheckin()", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("SuperchargeBingoCheckin()", start, (int)result.StatusCode, car.CarInDB);
 
                     int checkinID = 0;
                     try
@@ -5674,6 +5785,7 @@ DESC", con))
                             if (kpv)
                             {
                                 car.Virtual_key = true;
+                                Log("*** Virtual Key available");
                                 return true;
                             }
 
@@ -5682,6 +5794,9 @@ DESC", con))
 
                             if (upv)
                             {
+                                car.CurrentJSON.FatalError = "No Virtual Key!!! Go to: <a href='https://www.tesla.com/_ak/teslalogger.de'>https://www.tesla.com/_ak/teslalogger.de</a>";
+                                car.CurrentJSON.CreateCurrentJSON();
+                                Log("*** No Virtual Key. Teslalogger won't work!!! go to https://www.tesla.com/_ak/teslalogger.de");
                                 car.Virtual_key = false;
                                 return false;
                             }
@@ -5713,7 +5828,7 @@ DESC", con))
             return null;
         }
 
-        internal static bool BranchExists(string branch)
+        internal static bool BranchExists(string branch, out HttpStatusCode statusCode)
         {
             try
             {
@@ -5724,6 +5839,7 @@ DESC", con))
                 client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("(00000000; " + Thread.CurrentThread.ManagedThreadId + ")"));
 
                 var g = client.GetAsync("https://api.github.com/repos/bassmaster187/TeslaLogger/branches/" + branch).Result;
+                statusCode = g.StatusCode;
                 if (g.IsSuccessStatusCode)
                 {
                     string res = g.Content.ReadAsStringAsync().Result;
@@ -5739,7 +5855,7 @@ DESC", con))
                 ex.ToExceptionless().FirstCarUserID().Submit();
                 Logfile.Log(ex.ToString());
             }
-
+            statusCode = 0;
             return false;
         }
 

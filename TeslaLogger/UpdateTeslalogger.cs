@@ -730,6 +730,12 @@ PRIMARY KEY(id)
                 AssertAlterDB();
                 DBHelper.ExecuteSQLQuery("ALTER TABLE mothership ADD COLUMN httpcode int NULL", 600);
             }
+            if (!DBHelper.ColumnExists("mothership", "carid"))
+            {
+                Logfile.Log("ALTER TABLE mothership ADD COLUMN carid INT UNSIGNED NULL DEFAULT NULL");
+                AssertAlterDB();
+                DBHelper.ExecuteSQLQuery("ALTER TABLE mothership ADD COLUMN carid INT UNSIGNED NULL DEFAULT NULL", 6000);
+            }
         }
 
         private static void CheckDBSchema_httpcodes()
@@ -1332,7 +1338,7 @@ PRIMARY KEY(id)
                 {
                     var branch = File.ReadAllText("BRANCH").Trim();
 
-                    if (WebHelper.BranchExists(branch))
+                    if (WebHelper.BranchExists(branch, out HttpStatusCode statusCode))
                     {
                         Logfile.Log($"YOU ARE USING BRANCH: " + branch);
 
@@ -1342,6 +1348,12 @@ PRIMARY KEY(id)
                     else
                     {
                         Logfile.Log($"BRANCH NOT EXIST: " + branch);
+
+                        if (statusCode == HttpStatusCode.NotFound)
+                        {
+                            File.Delete("BRANCH");
+                            Logfile.Log("BRANCH file deleted!");
+                        }
                     }
                 }
 
