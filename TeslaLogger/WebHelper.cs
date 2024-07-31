@@ -692,7 +692,8 @@ namespace TeslaLogger
                 }
 
                 HttpClient httpClientTeslaAPI = GetHttpClientTeslaAPI();
-                using (var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://teslalogger.de:4444/api/1/users/region"))) {
+                using (var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://teslalogger.de:4444/api/1/users/region")))
+                {
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Tesla_token);
                     Tools.DebugLog($"GetRegion #{car.CarInDB} request: {request.RequestUri}");
                     HttpResponseMessage response = httpClientTeslaAPI.SendAsync(request).Result;
@@ -761,6 +762,12 @@ namespace TeslaLogger
                 lastRefreshToken = DateTime.UtcNow;
 
                 Log("Update Access Token From Refresh Token - FleetAPI!");
+                if (String.IsNullOrEmpty(refresh_token))
+                {
+                    car.Log("No Refresh Token");
+                    return "";
+                }
+
                 using (var formContent = new FormUrlEncodedContent(new[]
             {
                 new KeyValuePair<string, string>("refresh_token", refresh_token),
@@ -1606,9 +1613,10 @@ namespace TeslaLogger
 
         internal bool IsCharging(bool justCheck = false, bool noMemcache = false)
         {
-            if (car.FleetAPI && justCheck) {
-                return car.telemetry?.IsCharging ?? false;    
-            }   
+            if (car.FleetAPI && justCheck)
+            {
+                return car.telemetry?.IsCharging ?? false;
+            }
 
             string resultContent = "";
             try
@@ -2474,14 +2482,13 @@ namespace TeslaLogger
                 }
 
                 string state = r4["state"].ToString();
-                string temp_Tesla_Streamingtoken = r4["tokens"][0].ToString();
-
-                if (temp_Tesla_Streamingtoken != Tesla_Streamingtoken)
+                if (r4.ContainsKey("tokens") && r4["tokens"] != null)
                 {
-                    Tesla_Streamingtoken = temp_Tesla_Streamingtoken;
-                    //Log("Streamingtoken changed (IsOnline): " + Tools.ObfuscateString(Tesla_Streamingtoken));
-
-                    // can be ignored, is not used at the moment car.Log("Tesla_Streamingtoken changed!");
+                    string temp_Tesla_Streamingtoken = r4["tokens"][0].ToString();
+                    if (temp_Tesla_Streamingtoken != Tesla_Streamingtoken)
+                    {
+                        Tesla_Streamingtoken = temp_Tesla_Streamingtoken;
+                    }
                 }
 
                 try
@@ -3258,8 +3265,8 @@ namespace TeslaLogger
             if (car.FleetAPI && !justinsertdb)
             {
                 if (car.telemetry?.Driving == false)
-                { 
-                    return false; 
+                {
+                    return false;
                 }
             }
 
@@ -3292,6 +3299,7 @@ namespace TeslaLogger
                 decimal dLongitude = 0;
                 int heading = 0;
 
+                /*
                 try
                 {
                     string temp_Tesla_Streamingtoken = jsonResult["response"]["tokens"][0].ToString();
@@ -3309,6 +3317,7 @@ namespace TeslaLogger
                     SubmitExceptionlessClientWithResultContent(ex, resultContent);
                     ExceptionWriter(ex, resultContent);
                 }
+                */
 
                 if (drive_state.ContainsKey("latitude"))
                 {
@@ -3434,7 +3443,7 @@ namespace TeslaLogger
             }
             catch (Exception ex)
             {
-                if (resultContent == null || resultContent == "NULL")
+                if (resultContent == null || resultContent == "NULL" )
                 {
                     Log("IsDriving = NULL!");
                     Thread.Sleep(10000);
@@ -3858,9 +3867,9 @@ namespace TeslaLogger
             {
                 // speed is converted by InsertPos
                 // power is converted by InsertPos
-                double dodometer_km = dodometer / 0.62137119223733;
+                double dodometer_km = Tools.MlToKm(dodometer);
                 // battery_range_km = range in ml to km
-                double battery_range_km = irange / 0.62137119223733;
+                double battery_range_km = Tools.MlToKm(irange);
                 // ideal_battery_range_km = ideal_battery_range_km * car specific factor
                 double ideal_battery_range_km = battery_range_km * battery_range2ideal_battery_range;
                 double? outside_temp = car.CurrentJSON.current_outside_temperature;
@@ -3874,6 +3883,9 @@ namespace TeslaLogger
                     //Tools.DebugLog($"Stream: InsertPos({v[0]}, {latitude}, {longitude}, {ispeed}, {dpower}, {dodometer_km}, {ideal_battery_range_km}, {battery_range_km}, {isoc}, {outside_temp}, String.Empty)");
                     car.DbHelper.InsertPos(v[0], latitude, longitude, ispeed, dpower, dodometer_km, ideal_battery_range_km, battery_range_km, isoc, outside_temp, String.Empty);
                 }
+            }
+            if (int.TryParse(heading, out int iheading)) {  // heading in degrees
+                car.CurrentJSON.heading = iheading;
             }
         }
 
@@ -4894,6 +4906,12 @@ DESC", con))
 
                         return resultContent;
                     }
+
+                    if (cmd.Contains("vehicle_data") && noMemcache == false && result.StatusCode == HttpStatusCode.RequestTimeout)
+                    {
+                        MemoryCache.Default.Add(cacheKey, "NULL", DateTime.Now.AddSeconds(15));
+                    }
+
                     DBHelper.AddMothershipDataToDB("GetCommand(" + cmd + ")", double.Parse("-1." + (int)result.StatusCode, Tools.ciEnUS), (int)result.StatusCode, car.CarInDB);
                     if (result.StatusCode == HttpStatusCode.Unauthorized)
                     {
@@ -4942,7 +4960,7 @@ DESC", con))
                         {
                             sleep = sleep * 1000;
                         }
-                        else 
+                        else
                         {
                             sleep = (random.Next(5000) + 60000) * 1000;
                         }
@@ -4958,7 +4976,7 @@ DESC", con))
                         if (result.Headers.TryGetValues("ratelimit-reset", out var v3))
                             l += ", ratelimit-reset: " + v3.First();
 
-                        l += ", sleep till: "+ DateTime.Now.AddMilliseconds(sleep).ToString(Tools.ciDeDE);
+                        l += ", sleep till: " + DateTime.Now.AddMilliseconds(sleep).ToString(Tools.ciDeDE);
 
                         l += $", CommandCounter: {commandCounter} Drive: {commandCounterDrive} Charge: {commandCounterCharging} Online: {commandcounterOnline}";
 
@@ -4969,7 +4987,7 @@ DESC", con))
 
                         car.CreateExeptionlessLog("TooManyRequests", l, LogLevel.Warn).Submit();
 
-                        Log(l1+l);
+                        Log(l1 + l);
                         car.CurrentJSON.FatalError += " TooManyRequests";
                         car.CurrentJSON.CreateCurrentJSON();
                         Thread.Sleep(sleep);
@@ -5038,52 +5056,13 @@ DESC", con))
             return false;
         }
 
-        public async Task<string> GetNearbyChargingSites(double lat, double lng)
+        // for classic Owner API
+        public string GetNearbyChargingSitesOwnerAPI()
         {
             string resultContent = "";
             try
             {
-                HttpClient client = GethttpclientTeslaNearbyChargingSites();
-
-                string adresse = "https://akamai-apigateway-charging-ownership.tesla.com/graphql?deviceLanguage=en&deviceCountry=US&ttpLocale=en_US&vin=" + car.Vin + "&operationName=GetNearbyChargingSites";
-
-                DateTime start = DateTime.UtcNow;
-                string data = @"{ ""query"": ""query GetNearbyChargingSites($args: GetNearbyChargingSitesRequestType!) {charging {\n    nearbySites(args: $args) {\n      sitesAndDistances {\n        ...ChargingNearbySitesFragment\n      }\n    }\n  }\n}\n    \n    fragment ChargingNearbySitesFragment on ChargerSiteAndDistanceType {\n  activeOutages {\n    message\n  }\n  availableStalls {\n    value\n  }\n  centroid {\n    ...EnergySvcCoordinateTypeFields\n  }\n  drivingDistanceMiles {\n    value\n  }\n  entryPoint {\n    ...EnergySvcCoordinateTypeFields\n  }\n  haversineDistanceMiles {\n    value\n  }\n  id {\n    text\n  }\n  localizedSiteName {\n    value\n  }\n  maxPowerKw {\n    value\n  }\n  totalStalls {\n    value\n  }\n  siteType\n  accessType\n}\n    \n    fragment EnergySvcCoordinateTypeFields on EnergySvcCoordinateType {\n  latitude\n  longitude\n}\n    "",
-  ""variables"": {
-                    ""args"": {
-                        ""userLocation"": {
-        ""latitude"": " + lat.ToString(Tools.ciEnUS) + @",
-        ""longitude"": " + lng.ToString(Tools.ciEnUS) + @"
-                        },
-      ""northwestCorner"": {
-        ""latitude"": " + (lat + 2).ToString(Tools.ciEnUS) + @",
-        ""longitude"": " + (lng - 2).ToString(Tools.ciEnUS) + @"
-      },
-      ""southeastCorner"": {
-        ""latitude"": " + (lat - 2).ToString(Tools.ciEnUS) + @",
-        ""longitude"": " + (lng + 2).ToString(Tools.ciEnUS) + @"
-      },
-      ""openToNonTeslasFilter"": {
-                            ""value"": false
-      },
-      ""languageCode"": ""en"",
-      ""countryCode"": ""US"",
-      ""vin"": """ + car.Vin + @"""
-                    }
-                },
-  ""operationName"": ""GetNearbyChargingSites""
-}";
-
-                StringContent queryString = new StringContent(data, Encoding.UTF8, "application/json");
-                HttpResponseMessage result = await client.PostAsync(adresse, queryString);
-                resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
-                DBHelper.AddMothershipDataToDB("GetCommand(nearby_charging_sites)", start, (int)result.StatusCode, car.CarInDB);
-
-                if (!result.IsSuccessStatusCode)
-                {
-                    car.webhelper.nearbySuCServiceFail++;
-                    throw new Exception("NearbyChargingSiteFail: " + result.StatusCode.ToString() + " CarState: " + car.GetCurrentState().ToString() + " (OK: " + car.webhelper.nearbySuCServiceOK + " - Fail: " + car.webhelper.nearbySuCServiceFail + ")");
-                }
+                resultContent = GetCommand("nearby_charging_sites").Result;
                 return resultContent;
             }
             catch (Exception ex)
@@ -5591,7 +5570,7 @@ DESC", con))
                     }
                 }
 
-                double speed_kmh = (int)DBHelper.MphToKmhRounded(speed_mph);
+                double speed_kmh = (int)Tools.MphToKmhRounded(speed_mph);
 
                 Dictionary<string, object> values = new Dictionary<string, object>
                     {
@@ -5848,7 +5827,7 @@ DESC", con))
                 else if (g.StatusCode == HttpStatusCode.NotFound)
                 {
                     return false;
-                }    
+                }
             }
             catch (Exception ex)
             {
