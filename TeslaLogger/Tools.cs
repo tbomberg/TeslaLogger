@@ -976,7 +976,7 @@ namespace TeslaLogger
                     }
                     else if (j["update"] == "none")
                     {
-                        return UpdateType.none;
+                        return UpdateType.stable;
                     }
                 }
             }
@@ -1335,6 +1335,33 @@ namespace TeslaLogger
 
             _OSVersion = ret;
             return ret;
+        }
+
+
+        public static double CalculateBearing(double lat1, double lon1, double lat2, double lon2)
+        {
+            double dLon = ToRadians(lon2 - lon1);
+            double lat1Rad = ToRadians(lat1);
+            double lat2Rad = ToRadians(lat2);
+
+            double y = Math.Sin(dLon) * Math.Cos(lat2Rad);
+            double x = Math.Cos(lat1Rad) * Math.Sin(lat2Rad) - Math.Sin(lat1Rad) * Math.Cos(lat2Rad) * Math.Cos(dLon);
+
+            double bearing = Math.Atan2(y, x);
+            bearing = ToDegrees(bearing);
+            bearing = (bearing + 360) % 360; // Normalize to 0-360
+
+            return bearing;
+        }
+
+        private static double ToRadians(double degrees)
+        {
+            return degrees * (Math.PI / 180);
+        }
+
+        private static double ToDegrees(double radians)
+        {
+            return radians * (180 / Math.PI);
         }
 
         // source: https://www.limilabs.com/blog/json-net-formatter
@@ -2139,9 +2166,9 @@ WHERE
             return Math.Round(speed_mph / 0.62137119223733);
         }
 
-        internal static double MlToKm(double miles)
+        internal static double MlToKm(double miles, int decimals = 3)
         {
-            return miles / 0.62137119223733;
+            return Math.Round(miles * 1.609344, decimals);
         }
     }
 

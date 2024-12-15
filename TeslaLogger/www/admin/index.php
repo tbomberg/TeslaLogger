@@ -2,8 +2,19 @@
 require_once("redirect.php");
 require_once("language.php");
 require_once("tools.php");
-session_start();
+
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+include "menu.php";
 global $display_name;
+global $carNeedFleetAPI;
+global $carVIN;
+global $carNeedSubscription;
+global $fleetapiinfo;
+
+$carNeedSubscription = false;
 $carid = GetDefaultCarId();
 if (isset($_REQUEST["carid"]))
 {
@@ -424,75 +435,13 @@ else
 
 	}
 
-function ShowInfo()
-{
 	<?php
-	$prefix = "/etc/teslalogger/";
-    if (isDocker())
-		$prefix = "/tmp/";
-
-	if (file_exists($prefix."cmd_gosleep_$carid.txt"))
-	{?>
-		$("#InfoText").html("<h1><?php t("TextSuspendTeslalogger"); ?></h1>");
-		$(".HeaderT").show();
-		$("#PositiveButton").text("<?php t("Resume Teslalogger"); ?>");
-		$("#PositiveButton").click(function(){window.location.href='/wakeup.php?id=' + <?= $carid ?>;});
-		$("#NegativeButton").hide();
-	<?php
-	}
-	else if (!file_exists("/etc/teslalogger/sharedata.txt") &&
-	!file_exists("/etc/teslalogger/nosharedata.txt") &&
-	!file_exists("/tmp/sharedata.txt") &&
-	!file_exists("/tmp/nosharedata.txt")
-	)
-	{?>
-		$("#InfoText").html("<?php t("TextShare"); ?>");
-		$(".HeaderT").show();
-		$("#PositiveButton").click(function(){window.location.href='settings_share.php?a=yes';});
-		$("#NegativeButton").click(function(){window.location.href='settings_share.php?a=no';});
-	<?php
-	}
-	else if(isDocker() && GrafanaVersion() != "10.0.1")
-	{?>
-		<?php
-		$t1=get_text("Please update to latest docker-compose.yml file. Check: {LINK}");
-		$t1=str_replace("{", "<a href='https://github.com/bassmaster187/TeslaLogger/blob/master/docker_setup.md#docker-update--upgrade'>", $t1);
-		$t1=str_replace("}", '</a>', $t1);
-		?>
-		$("#InfoText").html("<h1><?php echo $t1; ?></h1>");
-		$(".HeaderT").show();
-		$("#PositiveButton").click(function(){window.location.href='https://github.com/bassmaster187/TeslaLogger/blob/master/docker_setup.md#docker-update--upgrade';});
-		$("#NegativeButton").hide();
-	<?php
-	} else if (isDocker() && !DatasourceUpdated())
-	{?>
-		$("#InfoText").html("<h1>Please update datasource.yaml file. Check: <a href='https://github.com/bassmaster187/TeslaLogger/blob/master/docker_setup.md#docker-update--upgrade'>LINK</a></h1>");
-		$(".HeaderT").show();
-		$("#PositiveButton").click(function(){window.location.href='https://github.com/bassmaster187/TeslaLogger/blob/master/docker_setup.md#docker-update--upgrade';});
-		$("#NegativeButton").hide();
-	<?php
-	}
-	else if (!files_are_equal("/etc/teslalogger/changelog.md","/tmp/changelog.md"))
-	{?>
-		$.get("changelog_plain.php").success(function(data){
-			$("#InfoText").html(data);
-		});
-
-		$(".HeaderT").show();
-		$("#PositiveButton").text("<?php t("OK"); ?>");
-		$("#PositiveButton").click(function(){window.location.href='changelogread.php';});
-		$("#NegativeButton").hide();
-	<?php
-	}
 	?>
-
-}
   </script>
 
   </head>
   <body>
   <?php
-    include "menu.php";
     echo(menu("Teslalogger"));
 ?>
 
@@ -515,6 +464,31 @@ function ShowInfo()
 			<img id="unlocked"class="caricons" src="img/unlocked.png" title="Unlocked">
 		</td>
 	  </thead>
+	  <?php
+	  	if ($carNeedFleetAPI)
+	  		echo("<tr><td><font color='red'><b>".get_text("FleetAPI")."</b></font></td><td><a href='password_fleet.php?id=$carid&vin=$carVIN'>".get_text("FleetAPIRequired")." ⚠️</a></td></tr>");
+		else if ($carNeedSubscription)
+		{
+			?>
+			<!-- car need subscription -->
+			<tr id="subscriptioninfo" style='display: none;'><td><font color='red'><b><?php t("Subscription") ?></b></font></td><td><a href='https://buy.stripe.com/9AQaHNdU33k29Vu144?client_reference_id=<?=$carVIN?>'><?php t("SubscriptionRequired") ?> ⚠️</a></td></tr>
+			<script>
+				$(document).ready(function(){
+					$.ajax({
+						url: "subscription-check.php?vin=<?=$carVIN?>",
+					}).done(function(data) {
+						if (data == "No subscription") {
+							$("#subscriptioninfo").show();
+						} 
+                    }).fail(function(jqXHR, textStatus, errorThrown) {
+                        console.error("Error: " + textStatus, errorThrown);
+                    });
+                });
+            </script>
+			<?php
+		}
+	
+	  ?>
 	  <tr><td width="130px"><b><span id="car_statusLabel"></span></b></td><td width="180px"><span id="car_status"></span></td></tr>
 	  <tr id='CellTempRow'><td><b><?php t("Cell Temp"); ?>:</b></td><td><span id="CellTemp"></span></td></tr>
 	  <tr id='BMSMaxChargeRow'><td><b><?php t("Max Charge"); ?>:</b></td><td><span id="BMSMaxCharge"></span></td></tr>
@@ -556,7 +530,8 @@ function ShowInfo()
 	else
 		$installed = getTeslaloggerVersion("/etc/teslalogger/git/TeslaLogger/Properties/AssemblyInfo.cs");
 
-	$branch = file_get_contents("/etc/teslalogger/BRANCH");
+	if (file_exists("/etc/teslalogger/BRANCH"))
+		$branch = file_get_contents("/etc/teslalogger/BRANCH");
 
 	if (!empty($branch))
 	{
@@ -606,5 +581,8 @@ function getZoomLevel()
 
   ?>
   </div>
+  <script>
+	<?php require_once("info.php"); ?>
+  </script>
   </body>
 </html>
