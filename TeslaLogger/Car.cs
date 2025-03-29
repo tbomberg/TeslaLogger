@@ -111,7 +111,7 @@ namespace TeslaLogger
 
         private static List<Car> allcars = new List<Car>();
 
-        private DBHelper dbHelper;
+        internal DBHelper dbHelper;
 
         internal readonly TeslaAPIState teslaAPIState;
 
@@ -222,6 +222,7 @@ namespace TeslaLogger
         internal string FleetApiAddress = "";
         public string _access_type;
         public bool _virtual_key;
+        internal bool vehicle_location = true;
 
         [MethodImpl(MethodImplOptions.Synchronized)]
         internal TeslaAPIState GetTeslaAPIState() { return teslaAPIState; }
@@ -323,8 +324,8 @@ namespace TeslaLogger
                             bool supportedByFleetTelemetry = SupportedByFleetTelemetry();
                             if (supportedByFleetTelemetry)
                             {
-                                telemetry = new TelemetryConnection(this);
-                                telemetryParser = telemetry.parser;
+                                telemetry = TelemetryConnection.Instance(this);
+                                telemetryParser = telemetry?.parser;
                                 /*
 
                                 string resultContent = "{\"data\":[{\"key\":\"VehicleSpeed\",\"value\":{\"stringValue\":\"25.476\"}},{\"key\":\"CruiseState\",\"value\":{\"stringValue\":\"Standby\"}},{\"key\":\"Location\",\"value\":{\"locationValue\":{\"latitude\":48.18759,\"longitude\":9.899887}}}],\"createdAt\":\"2024-06-20T22:00:30.129139612Z\",\"vin\":\"xxx\"}";
@@ -703,11 +704,11 @@ namespace TeslaLogger
                     }
                     else
                     {
-                        // Odometer didn't change for 600 seconds 
+                        // Odometer didn't change for 900 seconds 
                         TimeSpan ts = DateTime.Now - lastOdometerChanged;
-                        if (ts.TotalSeconds > 600)
+                        if (ts.TotalSeconds > 900 && !FleetAPI) // Fleet API has its own logic
                         {
-                            Log("Odometer didn't change for 600 seconds  -> Finish Trip!!!");
+                            Log("Odometer didn't change for 900 seconds  -> Finish Trip!!!");
                             DriveFinished();
                         }
                     }

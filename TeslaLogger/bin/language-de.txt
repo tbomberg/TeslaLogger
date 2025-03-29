@@ -1,8 +1,8 @@
 ﻿#Info
 INFO_important="Wichtige Info"
 INFO_FLEETAPI="Tesla wird ab dem 01.01.2025 die offizielle Fleet API in ein Bezahlmodell umwandeln ({LINK1}). Aus diesem Grund bin ich gezwungen, auf ein Abomodell umzusteigen und monatlich eine geringe Gebühr zu verlangen, um meine Ausgaben für Tesla, Steuern und den Zahlungsdienstleister zu decken.<br>Gleichzeitig verpflichten mich Teslas AGBs ({LINK2}), die inoffizielle Owners API aufzugeben, da Tesla ansonsten rechtliche Schritte gegen mich einleiten könnte (§5.6.6 und §5.6.11). Bitte wechselt eure Fahrzeuge von der Owners API zur Fleet API, indem ihr eure Zugangsdaten erneut eingebt.<br><br>Für die älteren Model S/X (Baujahr vor 2021) gibt es jedoch keine Lösung für die Nutzung der Fleet API. Diese Fahrzeuge können weiterhin über die alte Owners API betrieben werden. Ich gehe davon aus, dass Tesla in diesen Fällen keine rechtlichen Schritte einleiten wird. Für diese Fahrzeuge könnt ihr dennoch ein Abo abschließen, was jedoch eher als freiwillige Spende zu verstehen ist, da ich dafür keine Gebühren an Tesla zahlen muss.<br><br>Da Tesla mit der Fleet API sowohl ihre Server entlasten als auch Einnahmen generieren möchte, besteht die Möglichkeit, dass die inoffizielle Owners API am 01.01.2025 abgeschaltet wird. Wir hoffen, dass die älteren Model S/X davon nicht betroffen sein werden."
-
 INFO_RESTRICTED="Ohne ein aktives Abonnement können wir die Kosten für deinen Tesla leider nicht tragen. Daher sehen wir uns gezwungen, die Funktionalität und insbesondere die Übermittlungsfrequenz der Positionsdaten erheblich einzuschränken."
+INFO_VEHICLE_LOCATION="Tesla hat eine feinere Kontrolle des Datenzugriffs eingeführt: {LINK1} <br>Drittanbieter APPs können das Recht der Standortinformationen beantragen. Du hast das Rechnt noch nicht erteilt. Ab März 2025 werden keine Standortinformationen mehr verschickt, wenn du das Recht nicht erteilst. Bitte melde dich nochmal an: {LINK2}."
 
 #Allgemein
 Delete=Löschen
@@ -10,7 +10,7 @@ Save=Speichern
 Settings=Einstellungen
 Setup=Einrichtung
 Enabled="Aktiviert"
-StreamingPosHelp=<h1>Position von StreamingAPI</h1>aktiviert Positions-DB-Einträge von der Streaming-API - je nach Empfang des Fahrzeugs bedeutet dies bis zu 5 Positionen pro Sekunde (im Vergleich zu einer Position alle fünf Sekunden im normalen Modus), was die Größe der Datenbank stark erhöht, den Verschleiß der SD-Karte erhöht und zu großen Backups führt
+StreamingPosHelp="<h1>Position von StreamingAPI</h1>aktiviert Positions-DB-Einträge von der Streaming-API - je nach Empfang des Fahrzeugs bedeutet dies bis zu 5 Positionen pro Sekunde (im Vergleich zu einer Position alle fünf Sekunden im normalen Modus), was die Größe der Datenbank stark erhöht, den Verschleiß der SD-Karte erhöht und zu großen Backups führt."
 
 #Timeline Plugin.json
 Parking=Parken
@@ -59,6 +59,7 @@ kWh=kWh
 Wh/km=Wh/km
 km/h=km/h
 Please update to latest docker-compose.yml file. Check: {LINK}=Bitte aktualisieren Sie auf die neueste docker-compose.yml-Datei. Prüfen: {LINK}
+FatalErrorMissingKey=Virtual Key nicht gefunden!<br>Installation fortsetzen: {LINK}<br>Dann Teslalogger neu starten.
 
 #settings.php
 Credentials=Zugangsdaten
@@ -185,7 +186,7 @@ PF_SUBSCRIPTION="Schließen sie ein Abo ab um Daten von Tesla zu bekommen"
 
 #changecarname.php
 CarNameTitle=Name des Autos ändern
-TextCarName=Hier können Sie den Namen ändern.
+TextCarName="Hier können Sie den Namen ändern"
 CarName=Neuer Name
 
 #dashboard.php
@@ -303,7 +304,7 @@ SuperChargeBingo=SuperChargeBingo
 SuperChargeBingoComment=Sie können einen Link von TeslaLogger zu SuperChargeBingo einrichten, um automatische Checkins an Superchargern durchzuführen.
 Create a SuperChargeBingo account=Erstellen Sie ein SuperChargeBingo-Konto
 Create API key (must be secure)=API-Schlüssel erstellen (muss sicher sein)
-Copy Username and API key and insert it in TeslaLogger=Kopieren Sie Benutzername und API-Schlüssel und fügen Sie sie in TeslaLogger ein.
+Copy Username and API key and insert it in TeslaLogger="Kopieren Sie Benutzername und API-Schlüssel und fügen Sie sie in TeslaLogger ein"
 Save and restart TeslaLogger=Speichern und Neustart von TeslaLogger
 Username=Benutzername
 API key=API-Schlüssel
@@ -585,3 +586,5 @@ min PS="Min. PS"
 
 #journeys.php
 Ladezeit [h]="Ladezeit [h]"
+KomootSettings="Komoot Einstellungen"
+KomootSettingsInfo="Benutzername (eMail) und Passwort für Ihr Komoot-Konto"
