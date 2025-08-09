@@ -4,12 +4,10 @@ using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -19,13 +17,11 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.Caching;
 using System.Runtime.CompilerServices;
-using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
 using static TeslaLogger.Car;
 
 namespace TeslaLogger
@@ -2874,6 +2870,7 @@ namespace TeslaLogger
                     // Log("IsDriving2");
 
                     Task<double> odometer = GetOdometerAsync();
+                    double? inside_temp = null;
                     double? outside_temp = null;
                     Task<double?> t_outside_temp = null;
 
@@ -2903,7 +2900,12 @@ namespace TeslaLogger
                         longitude = 0;
                     }
 
-                    car.DbHelper.InsertPos(ts.ToString(), latitude, longitude, speed, power, odometer.Result, ideal_battery_range_km, battery_range_km, battery_level, outside_temp, elevation);
+                    if(car.CurrentJSON.current_inside_temperature != null)
+                    {
+                        inside_temp = (double)car.CurrentJSON.current_inside_temperature;
+                    }
+
+                    car.DbHelper.InsertPos(ts.ToString(), latitude, longitude, speed, power, odometer.Result, ideal_battery_range_km, battery_range_km, battery_level, inside_temp, outside_temp, elevation);
 
                     if (shift_state == "D" || shift_state == "R" || shift_state == "N")
                     {
@@ -3343,6 +3345,7 @@ namespace TeslaLogger
                 double battery_range_km = Tools.MlToKm(irange, 1);
                 // ideal_battery_range_km = ideal_battery_range_km * car specific factor
                 double ideal_battery_range_km = battery_range_km * battery_range2ideal_battery_range;
+                double? inside_temp = car.CurrentJSON.current_inside_temperature;
                 double? outside_temp = car.CurrentJSON.current_outside_temperature;
                 if (!string.IsNullOrEmpty(shift_state) && shift_state.Equals("D") &&
                     (latitude != last_latitude_streaming || longitude != last_longitude_streaming || dpower != last_power_streaming))
@@ -3352,7 +3355,7 @@ namespace TeslaLogger
                     last_power_streaming = dpower;
 
                     //Tools.DebugLog($"Stream: InsertPos({v[0]}, {latitude}, {longitude}, {ispeed}, {dpower}, {dodometer_km}, {ideal_battery_range_km}, {battery_range_km}, {isoc}, {outside_temp}, String.Empty)");
-                    car.DbHelper.InsertPos(v[0], latitude, longitude, ispeed, dpower, dodometer_km, ideal_battery_range_km, battery_range_km, isoc, outside_temp, String.Empty);
+                    car.DbHelper.InsertPos(v[0], latitude, longitude, ispeed, dpower, dodometer_km, ideal_battery_range_km, battery_range_km, isoc, inside_temp, outside_temp, String.Empty);
                 }
             }
             if (int.TryParse(heading, out int iheading)) {  // heading in degrees
@@ -4227,9 +4230,11 @@ WHERE
                 _ = long.TryParse(climate_state["timestamp"].ToString(), out long ts);
                 try
                 {
+                    decimal? inside_temp = null;
                     if (climate_state["inside_temp"] != null)
                     {
-                        car.CurrentJSON.current_inside_temperature = Convert.ToDouble(climate_state["inside_temp"]);
+                        inside_temp = (decimal)climate_state["inside_temp"];
+                        car.CurrentJSON.current_inside_temperature = (double)inside_temp;
                     }
                 }
                 catch (Exception) { }
