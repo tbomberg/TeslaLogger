@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.Caching;
 
 namespace TeslaLogger
 {
@@ -24,21 +25,26 @@ namespace TeslaLogger
         public double current_ideal_battery_range_km; // defaults to 0
         public double current_battery_range_km; // defaults to 0
         public double current_outside_temperature; // defaults to 0
-        public int current_battery_level; // defaults to 0
+        public double current_battery_level; // defaults to 0
 
         public int current_charger_voltage; // defaults to 0
         public int current_charger_phases; // defaults to 0
+        public int current_charger_phases_calc; // defaults to 0
         public int current_charger_actual_current; // defaults to 0
+        public int current_charger_actual_current_calc; // defaults to 0
         public int current_charge_current_request; // defaults to 0
         public double current_charge_energy_added; // defaults to 0
-        public int current_charger_power; // defaults to 0
+        public double current_charger_power; // defaults to 0
+        public int current_charger_power_calc_w; // defaults to 0
         public double current_charge_rate_km; // defaults to 0
         public double current_time_to_full_charge; // defaults to 0
         public bool current_charge_port_door_open; // defaults to false
         public string current_charger_brand = "";
-        public bool current_charger_present; // defaults to false
+        public bool current_fast_charger_present; // defaults to false
 
         public string current_car_version = "";
+        public string software_update_status = ""; // defaults to null;
+        public string software_update_version = ""; // defaults to null;
 
         public DateTime current_trip_start = DateTime.MinValue;
         public DateTime current_trip_end = DateTime.MinValue;
@@ -64,6 +70,11 @@ namespace TeslaLogger
         public string current_country_code = "";
         public string current_state = "";
 
+        public double tpms_pressure_fr; // defaults to 0;
+        public double tpms_pressure_fl; // defaults to 0;
+        public double tpms_pressure_rr; // defaults to 0;
+        public double tpms_pressure_rl; // defaults to 0;
+
         public DateTime lastScanMyTeslaReceived = DateTime.MinValue;
         public double? SMTCellTempAvg; // defaults to null;
         public double? SMTCellMinV; // defaults to null;
@@ -86,6 +97,8 @@ namespace TeslaLogger
         public double? active_route_traffic_minutes_delay; // defaults to null;
         public double? active_route_latitude; // defaults to null;
         public double? active_route_longitude; // defaults to null;
+
+        public string FatalError;
 
         public string current_json = "";
         private DateTime lastJSONwrite = DateTime.MinValue;
@@ -156,8 +169,8 @@ namespace TeslaLogger
                 var apistate = car.GetTeslaAPIState();
 
                 apistate.GetBool("charge_port_door_open", out current_charge_port_door_open);
-                apistate.GetString("software_update.status", out string software_update_status);
-                apistate.GetString("software_update.version", out string software_update_version);
+                apistate.GetString("software_update.status", out software_update_status);
+                apistate.GetString("software_update.version", out software_update_version);
 
                 apistate.GetInt("fd_window", out int fd_window);
                 apistate.GetInt("fp_window", out int fp_window);
@@ -200,24 +213,27 @@ namespace TeslaLogger
                    { "battery_level", current_battery_level},
                    { "charger_voltage", current_charger_voltage},
                    { "charger_phases", current_charger_phases},
+                   { "charger_phases_calc", current_charger_phases_calc},
                    { "charger_actual_current", current_charger_actual_current},
+                   { "charger_actual_current_calc", current_charger_actual_current_calc},
                    { "charge_current_request", current_charge_current_request},
                    { "charge_energy_added", current_charge_energy_added},
                    { "charger_power", current_charger_power},
+                   { "charger_power_calc_w", current_charger_power_calc_w},
                    { "charge_rate_km", current_charge_rate_km},
                    { "charge_port_door_open", current_charge_port_door_open },
                    { "time_to_full_charge", current_time_to_full_charge},
                    { "fast_charger_brand", current_charger_brand},
-                   { "fast_charger_present", current_charger_present},
+                   { "fast_charger_present", current_fast_charger_present},
                    { "car_version", current_car_version },
                    { "trip_start", current_trip_start.ToString("t",Tools.ciDeDE) },
                    { "trip_start_dt", current_trip_start.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", Tools.ciEnUS) },
                    { "trip_max_speed", current_trip_max_speed },
                    { "trip_max_power", current_trip_max_power },
                    { "trip_duration_sec", duration },
-                   { "trip_kwh", trip_kwh },
-                   { "trip_avg_kwh", trip_avg_wh },
-                   { "trip_distance", distance },
+                   { "trip_kwh", Math.Round(trip_kwh, 1) },
+                   { "trip_avg_kwh", Math.Round(trip_avg_wh, 1) },
+                   { "trip_distance", Math.Round(distance, 1) },
                    { "ts", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", Tools.ciEnUS)},
                    { "latitude", latitude },
                    { "longitude", longitude },
@@ -242,7 +258,12 @@ namespace TeslaLogger
                    { "open_doors" , open_doors},
                    { "frunk" , frunk},
                    { "trunk" , trunk},
-                   { "locked" , locked}
+                   { "locked" , locked},
+                   { "FatalError", FatalError},
+                   { "tpms_pressure_fr", tpms_pressure_fr },
+                   { "tpms_pressure_fl", tpms_pressure_fl },
+                   { "tpms_pressure_rr", tpms_pressure_rr },
+                   { "tpms_pressure_rl", tpms_pressure_rl }
                 };
 
                 TimeSpan ts = DateTime.Now - lastScanMyTeslaReceived;
@@ -319,6 +340,33 @@ namespace TeslaLogger
         public void SetLongitude(double lng)
         {
             longitude = lng;
+        }
+
+        internal void ToKVS()
+        {
+            ToKVS(car.CarInDB);
+        }
+
+        internal static void ToKVS(int CarInDB)
+        {
+            KVS.InsertOrUpdate($"currentJSON_{CarInDB}", jsonStringHolder[CarInDB]);
+        }
+
+        internal void FromKVS()
+        {
+            FromKVS(car.CarInDB);
+        }
+
+        internal static void FromKVS(int CarInDB)
+        {
+            if (KVS.Get($"currentJSON_{CarInDB}", out string cJSON) == KVS.SUCCESS)
+            {
+                jsonStringHolder[CarInDB] = cJSON;
+            }
+            else
+            {
+                jsonStringHolder[CarInDB] = "{}";
+            }
         }
     }
 }

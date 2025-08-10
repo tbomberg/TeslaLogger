@@ -11,6 +11,7 @@ using System.Web;
 
 using Newtonsoft.Json;
 using System.Data;
+using System.Security.Cryptography;
 
 namespace UnitTestsTeslalogger
 {
@@ -25,11 +26,11 @@ namespace UnitTestsTeslalogger
             Tools.SetThreadEnUS();
             long unixTimestamp = (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
             unixTimestamp *= 1000;
-            c.DbHelper.InsertPos(unixTimestamp.ToString(), 48.456691, 10.030241, 0, 0, 1, 0, 0, 0, 0, "0");
+            c.DbHelper.InsertPos(unixTimestamp.ToString(), 48.456691, 10.030241, 0, 0, 1, 0, 0, 0, 0, 0, "0");
             int startid = c.DbHelper.GetMaxPosid(true);
             c.DbHelper.StartDriveState(DateTime.Now);
 
-            c.DbHelper.InsertPos(unixTimestamp.ToString(), 35.677121, 139.751033, 0, 0, 2, 0, 0, 0, 0, "0");
+            c.DbHelper.InsertPos(unixTimestamp.ToString(), 35.677121, 139.751033, 0, 0, 2, 0, 0, 0, 0, 0, "0");
             int endid = c.DbHelper.GetMaxPosid(true);
             c.DbHelper.CloseDriveState(DateTime.Now);
         }
@@ -101,6 +102,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR RWD 2019", wh.car.ModelName);
             Assert.AreEqual(0.145, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -120,6 +124,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR RWD 2019", wh.car.ModelName);
             Assert.AreEqual(0.145, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -139,6 +146,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR RWD 2023", wh.car.ModelName);
             Assert.AreEqual(0.142, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -159,6 +169,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR P", wh.car.ModelName);
             Assert.AreEqual(0.152, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -167,7 +180,7 @@ namespace UnitTestsTeslalogger
             Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
             WebHelper wh = c.webhelper;
 
-            
+
             MemoryCache.Default.Remove("GetAvgMaxRage_0");
             MemoryCache.Default.Add("GetAvgMaxRage_0", 488, DateTime.Now.AddMinutes(1));
             wh.car.Vin = "5YJ3E7EA5KFXXXXXX";
@@ -179,6 +192,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR RWD 2019", wh.car.ModelName);
             Assert.AreEqual(0.145, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -199,6 +215,101 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR P 2021", wh.car.ModelName);
             Assert.AreEqual(0.158, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_M3_LR_P_2024_MIC()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            //2021 Model 3 LR Performance
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            MemoryCache.Default.Add("GetAvgMaxRage_0", 505, DateTime.Now.AddMinutes(1));
+            wh.car.Vin = "LRW3E7ET7RCXXXXXX";
+            wh.car.CarType = "model3";
+            wh.car.CarSpecialType = "base";
+            wh.car.DBWhTR = 0.147;
+            wh.car.TrimBadging = "p74d";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("M3 LR P 2024", wh.car.ModelName);
+            Assert.AreEqual(0.147, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_M3_LR_2024_MIC_Without_vehicle_config()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            //2021 Model 3 LR Highland
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            MemoryCache.Default.Add("GetAvgMaxRage_0", 550, DateTime.Now.AddMinutes(1));
+            wh.car.Vin = "LRW3E7EK2RCXXXXXX";
+            wh.car.CarType = "";
+            wh.car.CarSpecialType = "";
+            wh.car.DBWhTR = 0.141;
+            wh.car.TrimBadging = "";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("M3 LR 2024", wh.car.ModelName);
+            Assert.AreEqual(0.141, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_M3_LR_2024_MIC()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            //2021 Model 3 LR Highland
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            MemoryCache.Default.Add("GetAvgMaxRage_0", 550, DateTime.Now.AddMinutes(1));
+            wh.car.Vin = "LRW3E7EK2RCXXXXXX";
+            wh.car.CarType = "model3";
+            wh.car.CarSpecialType = "base";
+            wh.car.DBWhTR = 0.141;
+            wh.car.TrimBadging = "74d";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("M3 LR 2024", wh.car.ModelName);
+            Assert.AreEqual(0.141, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_M3_LR_P_2024_MIC_Without_vehicle_config()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            //2021 Model 3 LR Performance
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            MemoryCache.Default.Add("GetAvgMaxRage_0", 505, DateTime.Now.AddMinutes(1));
+            wh.car.Vin = "LRW3E7ET7RCXXXXXX";
+            wh.car.CarType = "";
+            wh.car.CarSpecialType = "";
+            wh.car.DBWhTR = 0;
+            wh.car.TrimBadging = "";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("M3 LR P 2024", wh.car.ModelName);
+            Assert.AreEqual(0.147, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -219,6 +330,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR P 2021", wh.car.ModelName);
             Assert.AreEqual(0.158, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -237,6 +351,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR", wh.car.ModelName);
             Assert.AreEqual(0.152, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -255,6 +372,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR", wh.car.ModelName);
             Assert.AreEqual(0.152, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -274,6 +394,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 LR P", wh.car.ModelName);
             Assert.AreEqual(0.158, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -293,6 +416,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 SR+ LFP", wh.car.ModelName);
             Assert.AreEqual(0.133, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -312,6 +438,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 SR+ LFP 2021", wh.car.ModelName);
             Assert.AreEqual(0.127, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -331,6 +460,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 SR+ LFP 2021", wh.car.ModelName);
             Assert.AreEqual(0.127, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -350,6 +482,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 SR+ LFP 2021", wh.car.ModelName);
             Assert.AreEqual(0.127, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -370,6 +505,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("M3 SR+ 2021", wh.car.ModelName);
             Assert.AreEqual(0.126, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -475,6 +613,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("S 100D Raven", wh.car.ModelName);
             Assert.AreEqual(0.162, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsFalse(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -494,6 +635,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("S Raven LR P", wh.car.ModelName);
             Assert.AreEqual(0.173, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsFalse(supportedByFleetTelemetry);
         }
 
 
@@ -514,6 +658,22 @@ namespace UnitTestsTeslalogger
         }
 
         [TestMethod]
+        public void Car_X_P100D_founder()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            wh.car.CarType = "modelx";
+            wh.car.CarSpecialType = "founder";
+            wh.car.TrimBadging = "p100d";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("X P100D", wh.car.ModelName);
+            Assert.AreEqual(0.226, wh.car.WhTR);
+        }
+        
+        [TestMethod]
         public void Car_X_100DRaven()
         {
             Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
@@ -529,12 +689,15 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("X 100D", wh.car.ModelName); // Raven suffix will be appended later
             Assert.AreEqual(0.184, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsFalse(supportedByFleetTelemetry);
         }
 
         [TestMethod]
         public void Car_X_2021_Plaid()
         {
-            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false); 
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
             WebHelper wh = c.webhelper;
 
             MemoryCache.Default.Remove("GetAvgMaxRage_0");
@@ -545,7 +708,30 @@ namespace UnitTestsTeslalogger
             wh.UpdateEfficiency();
 
             Assert.AreEqual("X 2021 Plaid", wh.car.ModelName);
-            Assert.AreEqual(0.149, wh.car.WhTR);
+            Assert.AreEqual(0.193, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_X_2021_Plaid_vin()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            // wh.car.CarType = "tamarind";
+            // wh.car.CarSpecialType = "base";
+            // wh.car.TrimBadging = "p100d";
+            wh.car.Vin = "7SAXCBE62NFxxxxxx";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("X 2021 Plaid", wh.car.ModelName);
+            Assert.AreEqual(0.193, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -562,7 +748,90 @@ namespace UnitTestsTeslalogger
             wh.UpdateEfficiency();
 
             Assert.AreEqual("S 2021 Plaid", wh.car.ModelName);
+            Assert.AreEqual(0.172, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_S_2021_Plaidvin()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            // wh.car.CarType = "lychee";
+            // wh.car.CarSpecialType = "base";
+            // wh.car.TrimBadging = "p100d";
+            wh.car.Vin = "5YJSA7E66PFxxxxxx";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("S 2021 Plaid", wh.car.ModelName);
+            Assert.AreEqual(0.172, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_S_2021_LRvinTelemetry()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            wh.car.CarType = "models";
+            wh.car.CarSpecialType = "base";
+            wh.car.TrimBadging = "100d";
+            wh.car.Vin = "SYJSA7E53PFXXXXXX";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("S 2021 LR", wh.car.ModelName);
             Assert.AreEqual(0.151, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_S_2021_PlaidvinTelemetry()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            wh.car.CarType = "models";
+            wh.car.CarSpecialType = "base";
+            wh.car.TrimBadging = "p100d";
+            wh.car.Vin = "5YJSA7E66PFXXXXXX";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("S 2021 Plaid", wh.car.ModelName);
+            Assert.AreEqual(0.172, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_X_2021_LRvinTelemetry()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            wh.car.CarType = "modelx";
+            wh.car.CarSpecialType = "base";
+            wh.car.TrimBadging = "100d";
+            wh.car.Vin = "7SAXCCE50PFXXXXXX";
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("X 2021 LR", wh.car.ModelName);
+            Assert.AreEqual(0.181, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -600,6 +869,9 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("Y LR AWD (MIC 2021)", wh.car.ModelName);
             Assert.AreEqual(0.148, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -619,22 +891,25 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("Y LR AWD (MIC 2022)", wh.car.ModelName);
             Assert.AreEqual(0.148, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
         [TestMethod]
         public void Car_Y_SR_MIG_BYD()
         {
-            string[] VINSs = { 
-                "XP7YGCEJ1PB", 
-                "XP7YGCEJ2PB", 
-                "XP7YGCEJ3PB", 
-                "XP7YGCEJ6PB", 
-                "XP7YGCEJ7PB", 
-                "XP7YGCEJ8PB", 
-                "XP7YGCEJ9PB", 
-                "XP7YGCES0RB", 
-                "XP7YGCES1RB", 
-                "XP7YGCES4RB", 
-                "XP7YGCES8PB", 
+            string[] VINSs = {
+                "XP7YGCEJ1PB",
+                "XP7YGCEJ2PB",
+                "XP7YGCEJ3PB",
+                "XP7YGCEJ6PB",
+                "XP7YGCEJ7PB",
+                "XP7YGCEJ8PB",
+                "XP7YGCEJ9PB",
+                "XP7YGCES0RB",
+                "XP7YGCES1RB",
+                "XP7YGCES4RB",
+                "XP7YGCES8PB",
                 "XP7YGCES9RB" };
 
             foreach (string vin in VINSs)
@@ -653,13 +928,16 @@ namespace UnitTestsTeslalogger
 
                 Assert.AreEqual("Y SR (MIG BYD)", wh.car.ModelName);
                 Assert.AreEqual(0.142, wh.car.WhTR);
+
+                bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+                Assert.IsTrue(supportedByFleetTelemetry);
             }
         }
 
         [TestMethod]
         public void Car_Y_SR_MIG_CATL()
         {
-            string[] VINSs = { "XP7YGCFS2RB", "XP7YGCFSXRB"};
+            string[] VINSs = { "XP7YGCFS2RB", "XP7YGCFSXRB" };
 
             foreach (string vin in VINSs)
             {
@@ -677,6 +955,9 @@ namespace UnitTestsTeslalogger
 
                 Assert.AreEqual("Y SR (MIG CATL)", wh.car.ModelName);
                 Assert.AreEqual(0.142, wh.car.WhTR);
+
+                bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+                Assert.IsTrue(supportedByFleetTelemetry);
             }
         }
 
@@ -701,6 +982,9 @@ namespace UnitTestsTeslalogger
 
                 Assert.AreEqual("Y SR (MIC)", wh.car.ModelName);
                 Assert.AreEqual(0.142, wh.car.WhTR);
+
+                bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+                Assert.IsTrue(supportedByFleetTelemetry);
             }
         }
 
@@ -721,6 +1005,31 @@ namespace UnitTestsTeslalogger
 
             Assert.AreEqual("Y P (MIG)", wh.car.ModelName);
             Assert.AreEqual(0.165, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
+        }
+
+        [TestMethod]
+        public void Car_Y_LR_RWD()
+        {
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            MemoryCache.Default.Remove("GetAvgMaxRage_0");
+            MemoryCache.Default.Add("GetAvgMaxRage_0", 520, DateTime.Now.AddMinutes(1));
+            wh.car.Vin = "XP7YGCER0RBXXXXXX";
+            wh.car.CarType = "modely"; 
+            wh.car.CarSpecialType = "base";
+            wh.car.DBWhTR = 149; 
+            wh.car.TrimBadging = "74"; 
+            wh.UpdateEfficiency();
+
+            Assert.AreEqual("Y LR RWD", wh.car.ModelName);
+            Assert.AreEqual(0.149, wh.car.WhTR);
+
+            bool supportedByFleetTelemetry = c.SupportedByFleetTelemetry();
+            Assert.IsTrue(supportedByFleetTelemetry);
         }
 
         [TestMethod]
@@ -745,6 +1054,19 @@ namespace UnitTestsTeslalogger
 
             Assert.IsFalse(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "1.0.0.0", Tools.UpdateType.none));
             Assert.IsFalse(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "1.0.0.1", Tools.UpdateType.none));
+            Assert.IsFalse(UpdateTeslalogger.UpdateNeeded("1.0.0.1", "1.0.0.0", Tools.UpdateType.none));
+            Assert.IsTrue(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "1.1.0.0", Tools.UpdateType.none));
+
+            // None is now the same as stable
+            Assert.IsFalse(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "1.0.0.1", Tools.UpdateType.none));
+            Assert.IsFalse(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "1.0.1.0", Tools.UpdateType.none));
+            Assert.IsTrue(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "1.1.0.0", Tools.UpdateType.none));
+            Assert.IsFalse(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "1.2.3.4", Tools.UpdateType.none));
+
+            Assert.IsFalse(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "2.0.0.1", Tools.UpdateType.none));
+            Assert.IsTrue(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "2.0.0.0", Tools.UpdateType.none));
+            Assert.IsTrue(UpdateTeslalogger.UpdateNeeded("1.0.0.0", "2.1.0.0", Tools.UpdateType.none));
+
             Assert.IsFalse(UpdateTeslalogger.UpdateNeeded("1.0.0.1", "1.0.0.0", Tools.UpdateType.none));
         }
 
@@ -988,7 +1310,7 @@ namespace UnitTestsTeslalogger
             Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "5YJSA7E21JF230000", "", null, false);
             var t = new TeslaAPIState(c);
             t.ParseAPI(json, "vehicles");
-            
+
             t.GetString("vin", out string vin);
             Assert.AreEqual("5YJSA7E21JF230000", vin);
 
@@ -1002,7 +1324,7 @@ namespace UnitTestsTeslalogger
             Assert.AreEqual("1492932463490000", id);
 
             t.GetString("vehicle_id", out string vehicle_id);
-            Assert.AreEqual("163110000", vehicle_id); 
+            Assert.AreEqual("163110000", vehicle_id);
 
             t.GetString("display_name", out string display_name);
             Assert.AreEqual("Teslarossa", display_name);
@@ -1072,6 +1394,36 @@ namespace UnitTestsTeslalogger
             Assert.AreEqual("2022.4.5.3", version);
         }
 
+        [TestMethod]
+        public void TestEncryption()
+        {
+            var body = "hfsdohfoiHZIOUzhhr9083urhf983u4z098ZH)(/z0ß98zhgo8/ZT9ßp8uzh)PO(/Z noifjn398ru039euoiH)(Pzru9p83u4rjoifhnejj09f8u3094rj3f9843ur09ujoi";
+            var pass = "27dbeab3-1574-4bad-a7b5-d7dadb0de2d1";
+            var wrongPass = "hjiodgfodfgj";
+
+            string encrypted = StringCipher.Encrypt(body, pass);
+            string decrypted = StringCipher.Decrypt(encrypted, pass);
+
+            Assert.AreEqual(body, decrypted);
+            Assert.AreNotEqual(body, encrypted);
+
+            var expectedExceptionCatched = false;
+
+            try
+            {
+                string decryptedWrong = StringCipher.Decrypt(encrypted, wrongPass);
+                Assert.Fail("Should throw an exception");
+            }
+            catch (CryptographicException ex)
+            {
+                expectedExceptionCatched = true;
+                System.Diagnostics.Debug.WriteLine("Expected CryptographicException catched");
+            }
+
+            if (!expectedExceptionCatched)
+                Assert.Fail("Expected CryptographicException not thrown");
+        }
+
         /*
         [TestMethod]
         public void RefreshAuthTokenFromRefrehToken()
@@ -1092,6 +1444,64 @@ namespace UnitTestsTeslalogger
             var url = t.GetLoginUrlForBrowser();
             string newurl = "https://auth.tesla.com/void/callback?code=1c0939d1421cd504cca7405b76c92b25fb6b2419e88e2231b568c70e7671&state=xqXt8LsGQle0UximPatd&issuer=https%3A%2F%2Fauth.tesla.com%2Foauth2%2Fv3";
             var tokens = t.GetTokenAfterLoginAsync(newurl).Result;
+        }
+
+        [TestMethod]
+        public void SleepRateLimit()
+        {
+            DateTime startOfDay = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 0, 0 ,0, DateTimeKind.Utc);
+            int s = Tools.CalculateSleepSeconds(300, 0, startOfDay);
+            Assert.AreEqual(s, 288);
+
+            DateTime oneHourRemaining = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 23, 0, 0, DateTimeKind.Utc);
+            int s2 = Tools.CalculateSleepSeconds(300, 100, oneHourRemaining);
+            Assert.AreEqual(s2, 18);
+
+            DateTime fiveMinuteRemaining = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 23, 55, 0, DateTimeKind.Utc);
+
+            int s3 = Tools.CalculateSleepSeconds(300, 0, fiveMinuteRemaining);
+            Assert.AreEqual(s2, 18);
+        }
+
+        [TestMethod]
+        public void ParsePackCurrent()
+        {
+            string data =
+                "{\"data\":[{\"key\":\"PackCurrent\",\"value\":{\"stringValue\":\"121.900\"}},{\"key\":\"ChargeState\",\"value\":{\"stringValue\":\"Idle\"}},{\"key\":\"FastChargerPresent\",\"value\":{\"stringValue\":\"true\"}}],\"createdAt\":\"2024-07-07T15:11:05.839516023Z\",\"vin\":\"5YJ3E7EA3LF123456\"}";
+            dynamic j = JsonConvert.DeserializeObject(data);
+            dynamic jData = j["data"];
+
+            Car c = new Car(0, "", "", 0, "", DateTime.Now, "", "", "", "", "", "", "", null, false);
+            WebHelper wh = c.webhelper;
+
+            TelemetryParser f = new TelemetryParser(c);
+            double? current = f.PackCurrent(jData, DateTime.Now);
+            Assert.AreEqual(current, 121.9d);
+
+        }
+
+        [TestMethod]
+        public void IsInUnitTest()
+        {
+            var inTest = Tools.IsUnitTest();
+            Assert.IsTrue(inTest, "Should detect that we are in unit test");
+        }
+
+        [TestMethod]
+        public void TestJWT1()
+        {
+            string token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InFEc3NoM2FTV0cyT05YTTdLMzFWV0VVRW5BNCJ9.eyJpc3MiOiJodHRwczovL2F1dGgudGVzbGEuY29tL29hdXRoMi92My9udHMiLCJhenAiOiI5MWQ0ZGEyYTM0NjgtNGI4MS1hZGJhLWQyYjI3MWJlZGZhMiIsInN1YiI6ImVhZTU4YzE4LWRiODEtNGZhZC05NDU2LTJiZDJhOWYyZjg0MCIsImF1ZCI6WyJodHRwczovL2ZsZWV0LWFwaS5wcmQubmEudm4uY2xvdWQudGVzbGEuY29tIiwiaHR0cHM6Ly9mbGVldC1hcGkucHJkLmV1LnZuLmNsb3VkLnRlc2xhLmNvbSIsImh0dHBzOi8vYXV0aC50ZXNsYS5jb20vb2F1dGgyL3YzL3VzZXJpbmZvIl0sInNjcCI6WyJvZmZsaW5lX2FjY2VzcyIsIm9wZW5pZCIsInVzZXJfZGF0YSIsInZlaGljbGVfZGV2aWNlX2RhdGEiLCJ2ZWhpY2xlX2NtZHMiLCJ2ZWhpY2xlX2NoYXJnaW5nX2NtZHMiXSwiYW1yIjpbInB3ZCIsIm1mYSIsIm90cCJdLCJleHAiOjE3MzgwNzA4ODQsImlhdCI6MTczODA0MjA4NCwib3VfY29kZSI6IkVVIiwibG9jYWxlIjoiZGEtREsiLCJhY2NvdW50X3R5cGUiOiJidXNpbmVzcyIsIm9wZW5fc291cmNlIjpudWxsLCJhY2NvdW50X2lkIjoiNGZjZTM3OWMtMmU0NS00Y2Y0LTkwYmMtNDZhMzE5MTZkZDE0IiwiYXV0aF90aW1lIjoxNzM4MDQyMDg0LCJub25jZSI6bnVsbH0.XXXXXXXXXXXXXX";
+            WebHelper.CheckJWT(token, out bool vehicle_location, out bool offline_access);
+            Assert.IsFalse(vehicle_location);
+            Assert.IsTrue(offline_access);
+        }
+        [TestMethod]
+        public void TestJWT2()
+        {
+            string token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InFEc3NoM2FTV0cyT05YTTdLMzFWV0VVRW5BNCJ9.eyJpc3MiOiJodHRwczovL2F1dGgudGVzbGEuY29tL29hdXRoMi92My9udHMiLCJhenAiOiI5MWQ0ZGEyYTM0NjgtNGI4MS1hZGJhLWQyYjI3MWJlZGZhMiIsInN1YiI6IjQ0ZjBjYTA5LTk0OGQtNDgxNy1hMWQ4LWMzNjM0YWY3MmNhYiIsImF1ZCI6WyJodHRwczovL2ZsZWV0LWFwaS5wcmQubmEudm4uY2xvdWQudGVzbGEuY29tIiwiaHR0cHM6Ly9mbGVldC1hcGkucHJkLmV1LnZuLmNsb3VkLnRlc2xhLmNvbSIsImh0dHBzOi8vYXV0aC50ZXNsYS5jb20vb2F1dGgyL3YzL3VzZXJpbmZvIl0sInNjcCI6WyJ1c2VyX2RhdGEiLCJ2ZWhpY2xlX2RldmljZV9kYXRhIiwidmVoaWNsZV9sb2NhdGlvbiIsInZlaGljbGVfY21kcyIsInZlaGljbGVfY2hhcmdpbmdfY21kcyIsIm9mZmxpbmVfYWNjZXNzIiwib3BlbmlkIl0sImFtciI6WyJwd2QiXSwiZXhwIjoxNzM4MDgxMzIzLCJpYXQiOjE3MzgwNTI1MjMsIm91X2NvZGUiOiJFVSIsImxvY2FsZSI6ImRlLURFIiwiYWNjb3VudF90eXBlIjoiYnVzaW5lc3MiLCJvcGVuX3NvdXJjZSI6bnVsbCwiYWNjb3VudF9pZCI6IjRmY2UzNzljLTJlNDUtNGNmNC05MGJjLTQ2YTMxOTE2ZGQxNCIsImF1dGhfdGltZSI6MTczODA1MjUyMywibm9uY2UiOm51bGx9.XXXXXXXXXX";
+            WebHelper.CheckJWT(token, out bool vehicle_location, out bool offline_access);
+            Assert.IsTrue(vehicle_location);
+            Assert.IsTrue(offline_access);
         }
     }
 }

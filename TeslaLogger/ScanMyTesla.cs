@@ -4,9 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 using MySql.Data.MySqlClient;
-using Exceptionless;
 using Newtonsoft.Json;
 using System.Reflection;
 using System.Net.Http.Headers;
@@ -132,7 +130,7 @@ namespace TeslaLogger
 
                     resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(true);
 
-                    DBHelper.AddMothershipDataToDB("teslalogger.de/get_scanmytesla.php", start, (int)result.StatusCode);
+                    DBHelper.AddMothershipDataToDB("teslalogger.de/get_scanmytesla.php", start, (int)result.StatusCode, car.CarInDB);
 
                     if (resultContent == "not found")
                     {

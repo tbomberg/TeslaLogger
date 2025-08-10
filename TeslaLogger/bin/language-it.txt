@@ -3,7 +3,7 @@ Delete=Eliminare
 Save=Salvare
 Settings=Impostazioni
 Setup=Impostare
-Enabled=Attivato
+Enabled="Attivato"
 kWh=kWh
 
 #Akku Trips.json
@@ -140,7 +140,7 @@ Online=Online
 Visited=Visitato
 
 #index.php
-Car Info=Informazioni autovettura
+Car Info="Informazioni autovettura"
 Status=Status
 Typical Range=Autonomia tipica
 Odometer=Contachilometri
@@ -148,7 +148,7 @@ Car Version=Versione autovettura
 Last Trip=Ultimo viaggio
 Duration=Durata
 Distance=Distanza
-Max km/h=Max Km/h
+Max km/h="Max Km/h"
 PS=HP
 Current Pos=Posizione attuale
 Last Update=Ultimo aggiornamento
@@ -172,7 +172,7 @@ Max Discharge=Scarico massimo
 Cell Imbalance=Squilibrio cellulare
 Software Update=Aggiornamento software
 Consumption=Consumo
-Ø Consumption=Ø Consumo
+Ø Consumption="Consumo medio"
 min=min
 Wh/km=Wh/km
 km/h=km/h
@@ -204,7 +204,7 @@ Abetterrouteplanner=Pianificatore di itinerari migliori
 #password.php
 Teslalogger Tesla Credentials=Teslalogger credenziali Tesla
 Please enter your Tesla account credentials=Inserite le credenziali Tesla
-Email=Email
+Email="E-mail"
 Password=Password
 Repeat Password=Ripeti la password
 Speichern=Salva
@@ -212,22 +212,22 @@ Please enter the access token!=Inserire il token di accesso!
 Please enter the refresh token!=Inserire il token di aggiornamento!
 Please select a vehicle=Selezionare un veicolo
 Check Logfile!=Controllare il file di registro!
-Do you really want to delete this vehicle?="Volete davvero eliminare questo veicolo?"
+Do you really want to delete this vehicle?="Volete eliminare questo veicolo?"
 Check Logfile in one minute!=Controllare il file di registro in un minuto!
 Unauthorized=Non autorizzato
-This isn't a valid URL!="Questo non è un URL valido!"
+This isn't a valid URL!="URL non valido."
 This isn't an auth link by Tesla!=Questo non è un link di autorizzazione di Tesla!
-The URL doesn't contain the expected format!="L'URL non contiene il formato previsto!"
+The URL doesn't contain the expected format!="L'URL non è nel formato previsto!"
 BA_Browser=Nel {browser} locale (consigliato)
 BA_Read=Leggere tutti i passaggi prima di continuare:
 BA_Logon=Cliccate sul link sottostante intitolato <b>Tesla Logon</b> che aprirà una nuova scheda/finestra per la pagina di logon di Tesla Authentication.
 BA_Auth=Accedere utilizzando le proprie credenziali Tesla e l'MFA, se richiesto (Tesla le ricorderà se si è già utilizzato il link in precedenza).
 BA_NotFound=Il risultato sarà una "Pagina non trovata". Questo è normale.
-BA_URL=Copiate l'URL risultante della pagina web nel modulo sottostante. All'interno dell'URL è presente un codice temporaneo che possiamo utilizzare per generare i token. Lo estrarremo per voi dal link.
+BA_URL="Copia e incolla l'URL risultante della pagina web nel modulo sottostante. All'interno dell'URL è presente un codice temporaneo che possiamo utilizzare per generare i token. Lo estrarremo link."
 BA_Invalid=Questi collegamenti funzionano in genere una sola volta, quindi se sul nostro sito web appare un messaggio di errore del tipo "Concessione non valida" o altro, potrebbe essere necessario ricominciare con il collegamento Tesla Logon, che dovrebbe produrre un nuovo collegamento.
 BA_Logoff=Se si desidera utilizzare un altro account, è necessario disconnettersi manualmente {qui!}
 BA_GetToken="Otterremo quindi i token per il vostro account Tesla."
-BA_SelectCar=Selezionare l'auto che si desidera utilizzare per Teslalogger.
+BA_SelectCar="Selezionare l'auto che si desidera utilizzare per Teslalogger."
 BA_Step1=Fase 1:
 BA_Step2=Fase 2:
 BA_Step3=Fase 3:
@@ -237,7 +237,7 @@ BA_Paste="Incollare l'URL risultante nella casella e fare clic sul pulsante "_QQ
 Get Tokens=Ottenere i gettoni
 Access Token=Gettone di accesso
 Refresh Token=Gettone di aggiornamento
-Car=Auto
+Car="Veicolo"
 Free Supercharging=Ricarica gratuita
 Reconnect=Ricollegarsi
 Please choose your vehicle=Scegliere il veicolo
@@ -245,7 +245,7 @@ Model=Modello
 VIN=VIN
 Free SUC=SUC gratuito
 Edit=Modifica
-New car=Auto nuova
+New car="Nuovo veicolo"
 
 #settings.php
 Credentials=Credenziali
@@ -264,7 +264,7 @@ mile=miglio
 Ideal=Ideale
 Rated=Valutazione
 Share data anonymously=Condividere i dati in modo anonimo
-Enable=Abilitazione
+Enable="Attivare"
 All=Tutti
 Stable=Stabile
 None=Nessuno
@@ -276,8 +276,8 @@ Teslalogger HTTP Port=Porta HTTP del Teslalogger
 Zoom Level=Livello di zoom
 ScanMyTesla integration=Integrazione di ScanMyTesla
 Position by StreamingAPI=Posizione da StreamingAPI
-Main Car=Auto principale
-Car Name=Nome dell'auto
+Main Car="Veicolo principale"
+Car Name="Nome del veicolo"
 ScanMyTesla last received=ScanMyTesla ha ricevuto l'ultima volta
 Tasker Token=Gettone per borse
 Tasker URL=URL Borse
@@ -312,16 +312,16 @@ Daten anonym teilen=Condividi i dati anonimamente
 TextSuspendTeslalogger=Teslalogger si è fermato! I dati non verranno memorizzati!
 Resume Teslalogger=Riprendi Teslalogger
 Range=Range
-TeslaAuthApps=You can use following apps to get an access token & refresh token from Tesla server:
+TeslaAuthApps="Puoi acquisire il token di accesso e refresh usando queste App:"
 
 #abrp.php
 ABRPTitle=Collegamento Atterrouteplanner
 TextABRP=Puoi impostare un collegamento da Teslalogger ad Atterrouteplanner per evitare di fornire le tue credenziali Tesla a terzi. Un altro vantaggio è ridurre al minimo la possibilità di impedire all'auto di andare a dormire se più di un servizio utilizza le tue credenziali.
 ABRP1=Crea un account Abetterrouteplanner
 ABRP2=Vai a Impostazioni
-ABRP3=Scegli la tua auto
-ABRP4=Salva la tua auto sul tuo account
-ABRP5="Dai un nome alla tua auto"
+ABRP3="Scegli il tuo veicolo"
+ABRP4="Salva il veicolo"
+ABRP5="Dai un nome al tuo veicolo"
 ABRP6=Clicca su "Link Generic" per ottenere un token ABRP
 ABRP7=Copia il token e fai clic su "Fatto"
 ABRP8=Inserisci il token in Teslalogger
@@ -358,15 +358,15 @@ Vehicle kWh=Vehicle kWh
 
 #mqtt.php
 MQTTSettings=MQTT settings
-MQTTSettingsInfo=MQTT Host is mandatory. All other settings are optional
+MQTTSettingsInfo="Il server MQTT é obbligatorio. Gli altri settaggi sono facoltativi"
 TopicStructure=Topic structure:
-MQTT1="All values in one JSON (if activated): "_QQ_"teslalogger/json/CAR_VIN/currentjson"_QQ_""
-MQTT2=All values as subtopics (if activated): "teslalogger/cars/CAR_VIN/ideal_battery_range_km"
-MQTT3="teslalogger" is parametrizable in field "Topic"
+MQTT1="Tutti i valori si trovano in un JSON (se attivato): "_QQ_"teslalogger/json/CAR_VIN/currentjson"_QQ_""
+MQTT2="Tutti i valori come subtopics (se attivato): "_QQ_"teslalogger/cars/CAR_VIN/ideal_battery_range_km"_QQ_""
+MQTT3=""_QQ_"Teslalogger"_QQ_" é parametrizzabile nel campo "_QQ_"Topic"
 MQTT4="CAR_VIN" is VIN of your car
 MQTT5="ideal_battery_range_km" are single topics
 ADDescription=AutoDiscovery:
-MQTTAD1=""_QQ_"singletopics"_QQ_" are mandatory for AutoDiscovery!"
+MQTTAD1=""_QQ_"single topics"_QQ_" sono obbligatori per l'AutoDiscovery!"
 ControlTopic=Topic for control:
 MQTT6="teslalogger/command/CAR_VIN/set_charge_limit" and "13" as RAW value
 MQTT7=Supported commands
@@ -412,11 +412,11 @@ High Frequency Logging=Registrazione ad alta frequenza
 Special Count=Conteggio speciale
 Count=Conteggio
 Special Features=Caratteristiche speciali
-Enable Sentry Mode="Abilita la modalità Sentinella"
+Enable Sentry Mode="Attivare la modalità Sentinella"
 Disable Sentry Mode="Disattivare la modalità Sentry"
 Turn HVAC off=Spegnere il sistema HVAC
 No sleep=Non si dorme
-Are you sure you want to delete this geofencing location?="Siete sicuri di voler eliminare questa posizione di geofencing?"
+Are you sure you want to delete this geofencing location?="Volete eliminare questa posizione di geofencing?"
 Error=Errore
 Deleted!=Soppresso!
 Meter=Metri
@@ -445,7 +445,7 @@ New Journey=Nuovo viaggio
 Journey name=Nome del viaggio
 Please wait=Attendere prego
 Please select start first=Selezionare prima l'inizio
-DelJourney="Si vuole davvero cancellare il viaggio {id}?"
+DelJourney="Eliminare il viaggio {id}?"
 Display _MENU_ records per page=Visualizzazione di _MENU_ record per pagina
 Nothing found=Non è stato trovato nulla
 Showing _START_ to _END_ of _TOTAL_ entries=Mostra da _START_ a _END_ di _TOTAL_ voci
@@ -487,6 +487,79 @@ Credentials Info=Informazioni sulle credenziali
 #restore.php
 Restore Database=Restore Database
 TextRestore1=Assicurarsi di eseguire un backup di Teslalogger prima di ripristinare qualsiasi database. Spostare la cartella di backup da \\RASPBERRY\teslalogger\backup al disco rigido!
-TextRestore2=
+TextRestore2="Il restore può richiedere fino a 10 minuti!"
 The restore process may take up to 10 minutes!=Il processo di ripristino può richiedere fino a 10 minuti!
 TextRestore3=Non interrompere in alcun modo il processo di ripristino! Non ricaricare la pagina! Non chiudere la pagina!
+
+#Timeline Plugin.json
+Dauer="Durata"
+Ø Temperatur="Temperatura media"
+
+#Status.json
+Current Status="Stato attuale"
+
+#Vehicle Alerts
+Fahrzeug Fehler="Allarmi veicolo"
+startedAt="Inizio"
+Fehler="Allarmi"
+
+#Trip Top Destinations.json
+Trip Top Ziele="Destinazioni top dei miei viaggi"
+Ladekosten="Costi di ricarica"
+kWh laut Zähler / Rechnung="KWh come da contatore o fattura"
+BA_FLEETAPI="API Tesla Fleet"
+
+#password_fleet.php
+PF_LOGOUT="Sconnettiti dall'account Tesal, in caso non l'avessi ancora fatto"
+Ø Verbrauch kWh/100km="Consumi medi in KWh/100Km"
+PF_HELP="Video di supporto"
+PF_VKEY="Configura una "_QQ_"Third-Party Virtual Key"_QQ_""
+Nur verfügbar mit ScanMyTesla="Disponibile soltanto con ScanMyTesla"
+Außentemperatur="Temperatura esterna"
+endedAt="Fine"
+Häufigkeit="Frequenza"
+Fahrzeug="Veicolo"
+Löschen="Cancella"
+Wirkungsgrad="Efficienza"
+Reichweite="Autonomia"
+
+#Verbrauchsstatistik.json
+Verbrauchsstatistik="Statistiche di consumo"
+PF_HERE="qui"
+Kosten pro Ladung="Costo per ricarica"
+
+#SOC Entladestatistik.json
+SOC Entladestatistik="Statistiche di scarica SOC"
+Kosten Blockiergebühr="Costo al minuto senza ricarica"
+PF_OLDSX="Sa hai una Tesla Model S/X anteriore al 2021, hai finito e puoi tornare alla pagina iniziale"
+Ladesäule="Stazione di ricarica"
+Kosten pro Minute="Costo al minuto"
+Summe="Totale"
+Parking="Parcheggio"
+Verbraucht="Comsumati"
+Ø Verbraucht kWh="consumo medio KWh"
+Zellspannungen="Voltaggio celle"
+PF_LOGIN="Vai alla pagina di autenticazione Tesla, e permetti a Teslalogger di accedere ait tuoi dati"
+Währung="Valuta"
+PV="Solare"
+Letzte Fahrt="Ultimo viaggio"
+Jahr/Monat="Anno/Mese"
+Kosten pro kWh="Costo al KWh"
+PF_LINK="LINK"
+Zelltemperatur="Temperatura celle"
+Ø Dauer Min="Durata media in minuti"
+Verbrauch [kWh]="KWh consumati"
+Zellspannung="Voltaggio cella"
+Missing="Manca"
+PF_PERMISSION="Info, quali permessi sono utilizzati e perché"
+
+#journeys.php
+Ladezeit [h]="Tempo di ricarica [h]"
+Trip Jahresstatistik="Statistiche annuali dei viaggi"
+Inactive="Inattivo"
+BA_MODELSXOLD="Model S/X costruite prima del 2021"
+INFO_important="Informazioni importanti"
+BA_ALLCARS="Tutti i veicoli a eccezione di Model S/X costruite prima del 2021"
+INFO_RESTRICTED="Senza un abbonamento attivo, non è possibile coprire i costi per la tua Tesla. Quindi, le funzioni saranno notevolmente limitate e, in particolare, la frequenza di aggiornamento della posizione."
+Subscription="Abbonamento"
+Subscribe="Iscriviti"

@@ -1,11 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Runtime.Caching;
-using System.Text;
-using System.Threading.Tasks;
-
 using Exceptionless;
 using Newtonsoft.Json;
 
@@ -16,6 +11,8 @@ namespace TeslaLogger
     {
         private string host;
         private string paramater;
+
+        internal string status;
 
         Guid guid; // defaults to new Guid();
         static WebClient client;
@@ -34,6 +31,12 @@ namespace TeslaLogger
         {
             try
             {
+
+                if (status != null)
+                {
+                    return status;
+                }
+
                 string cacheKey = "goe_" + guid.ToString();
                 object o = MemoryCache.Default.Get(cacheKey);
 
@@ -69,6 +72,27 @@ namespace TeslaLogger
 
         public override double? GetUtilityMeterReading_kWh()
         {
+            string j = null;
+            try
+            {
+                j = GetCurrentData();
+
+                dynamic jsonResult = JsonConvert.DeserializeObject(j);
+                string key = "whg";
+                string value = jsonResult[key];
+
+                double v = Double.Parse(value, Tools.ciEnUS);
+                v = v / (double)10.0;
+                v = Math.Round(v, 1);
+
+                return v;
+            }
+            catch (Exception ex)
+            {
+                ex.ToExceptionless().FirstCarUserID().Submit();
+                Logfile.ExceptionWriter(ex, j);
+            }
+
             return null;
         }
 

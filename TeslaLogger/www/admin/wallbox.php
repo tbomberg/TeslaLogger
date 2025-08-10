@@ -116,13 +116,17 @@ menu("Wallbox Test");
     <tr><td><?php t("Type"); ?>:</td><td>
         <select name="type" id="type">
         <option value=""></option>
+            <option value="cfos">cFos</option> 
             <option value="go-e">Go e-Charger</option>    
             <option value="openwb">Open WB</option>
+            <option value="openwb2">Open WB 2</option>
             <option value="shelly3em">Shelly 3EM</option>
             <option value="shellyem">Shelly EM</option>
+            <option value="smartevse3">SmartEVSE 3</option>
             <option value="tesla-gen3">Tesla Wallbox Gen 3</option>
             <option value="keba">Keba KeContact P30</option>
             <option value="evcc">EVCC</option>
+            <option value="warp">WARP</option>
         </select>
         </td></tr>
     <tr><td><?php t("Host"); ?>:</td><td><input id="host" type="text" /></td></tr>

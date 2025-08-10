@@ -1,4 +1,11 @@
-﻿#Akku Trips.json
+﻿#Info
+INFO_important="Important Info"
+INFO_FLEETAPI="Starting January 1, 2025, Tesla will transition the official Fleet API to a paid model ({LINK1}). As a result, I am forced to switch to a subscription model and charge a small monthly fee to cover my expenses for Tesla, taxes, and the payment service provider.<br><br>At the same time, Tesla’s Terms of Service ({LINK2}) compel me to discontinue the use of the unofficial Owners API; otherwise, they could take legal action against me (§5.6.6 and §5.6.11). Please migrate your vehicles from the Owners API to the Fleet API by re-entering your login credentials.<br><br>Unfortunately, for older Model S/X vehicles (manufactured before 2021), there is no solution to use the Fleet API. These vehicles can continue to operate via the old Owners API, and I don’t expect Tesla to take any legal action in such cases. However, you can still choose to subscribe for these vehicles as a form of donation, since I don’t have to pay Tesla for their usage.<br><br>Since Tesla aims to reduce server load and generate revenue with the Fleet API, it is likely that the unofficial Owners API will be shut down on January 1, 2025. We hope that older Model S/X vehicles will not be affected by this change."
+INFO_RESTRICTED="Without an active subscription, we unfortunately cannot cover the costs for your Tesla. Therefore, we are forced to significantly limit the functionality and, in particular, the frequency of position updates."
+INFO_VEHICLE_LOCATION="Tesla has introduced more granular control over data access: {LINK1} <br>Third-party apps can request permission to access location information. You have not yet granted this permission. Starting in March 2025, no location information will be shared unless you grant the necessary permission. Please log in again: {LINK2}."
+INFO_DEPRECATED_DOCKER="Deprecated Docker version. Please update to NET8 version."
+
+#Akku Trips.json
 Akku Trips=Battery Usage (Driving)
 Start Trip=Start Trip
 End Trip=End Trip
@@ -148,7 +155,7 @@ Verbrauchsstatistik=Consumption Statistics
 Visited=Visited
 
 #index.php
-Car Info=Car Info
+Car Info="Vehicle Info"
 Status=Status
 Typical Range=Typical Range
 Odometer=Odometer
@@ -156,7 +163,7 @@ Car Version=Car Version
 Last Trip=Last Trip
 Duration=Duration
 Distance=Distance
-Max km/h=Max km/h
+Max km/h="Max kph"
 PS=PS
 Current Pos=Current Pos
 Last Update=Last Update
@@ -167,6 +174,7 @@ Battery Heater=Battery Heater
 Sentry Mode=Sentry Mode
 Preconditioning=Preconditioning
 Offline=Offline
+Inactive=Inactive
 Falling asleep=Falling asleep
 min=min
 kWh=kWh
@@ -183,8 +191,9 @@ Max Discharge=Max Discharge
 Cell Imbalance=Cell Imbalance
 Software Update=Software Update
 Consumption=Consumption
-Ø Consumption=Ø Consumption
+Ø Consumption="Avg Consumption"
 Please update to latest docker-compose.yml file. Check: {LINK}=Please update to latest docker-compose.yml file. Check: {LINK}
+FatalErrorMissingKey=Virtual Key Missig!<br>Finish Setup at: {LINK}<br>And restart Teslalogger.
 
 #menu.php
 Logfile=Logfile
@@ -214,7 +223,7 @@ Abetterrouteplanner=Abetterrouteplanner
 #password.php
 Teslalogger Tesla Credentials=Teslalogger Tesla Credentials
 Please enter your Tesla account credentials=Please enter your Tesla account credentials
-Email=Email
+Email="E-mail"
 Password=Password
 Repeat Password=Repeat Password
 Löschen=Erase
@@ -231,43 +240,57 @@ This isn't an auth link by Tesla!=This isn't an auth link by Tesla!
 The URL doesn't contain the expected format!="The URL is not in the expected format!"
 Access Token=Access Token
 Refresh Token=Refresh Token
-Car=Car
+Car="Vehicle"
 Free Supercharging=Free Supercharging
 Reconnect=Reconnect
 Model=Model
 VIN=VIN
 Free SUC=Free SUC
 Edit=Edit
-New car=New car
-TeslaAuthApps=You can use following apps to get an access token & refresh token from Tesla server:
+New car="New vehicle"
+TeslaAuthApps="Get an access- and refresh token with these apps:"
 BA_Browser=In local {browser}
 BA_Read=Please read all the steps before continuing:
 BA_Logon=Click on the link below titled <b>Tesla Logon</b> which will open a new tab/window for the Tesla Authentication logon page
 BA_Auth=Log on using your Tesla credentials and MFA if required (Tesla will remember these if you have used the link before)
 BA_NotFound=This will appear to result in a "Page Not Found". This is normal.
-BA_URL=Copy the resulting URL of that webpage into the form below. Within the URL is a one time, temporary code that we can use to generate tokens. We will extract this for you from the link.
+BA_URL="Paste the URL of the webpage below. Tokens will be generated from a temporary code in it."
 BA_Invalid=These links typically only work once, so if an "Invalid Grant" or other error message appears on our website you may need to start again with the Tesla Logon link which should produce a new link.
 BA_Logoff=If you want to use a different account, you have to manually log off {here!}
 BA_GetToken="Thereafter, tokens are fetched for your Tesla account."
-BA_SelectCar=Select the car you want to use for Teslalogger.
+BA_SelectCar="Select the car you want to use with Teslalogger."
 BA_Step1=Step 1:
 BA_Step2=Step 2:
 BA_Step3=Step 3:
 BA_FillOut=Fill out this form:
 BA_CopyUrl="Copy the resulting URL as shown"
 BA_Paste="Paste the resulting URL into the box and click "_QQ_"Get Tokens"_QQ_" Button:"
-BA_FLEETAPI=Tesla Fleet API (recommended)
+BA_FLEETAPI="Tesla Fleet API"
+BA_ALLCARS="All vehicles except Model S/X built before 2021"
+BA_MODELSXOLD="Model S/X built before 2021"
 Get Tokens=Get Tokens
+Subscription="Subscription"
+Subscribe="Subscribe"
+SubscribeManage="Manage"
+SubscriptionRequired="Subscription Required!"
+FleetAPIRequired="Fleet API Required!"
+Aktiv="Active"
 
 #password_fleet.php
-PF_LOGOUT=Log out from your Tesla Account if you are already logged in
+PF_LOGOUT="Log out from your Tesla account if logged in already"
 PF_LOGIN=Go to the Tesla authentication page and allow Teslalogger to access your data
 PF_LINK=LINK
 PF_HELP=Help video
 PF_PERMISSION=Info, which permissions are used and why
 PF_OLDSX=If you have a pre-2021 Tesla Model S/X, you're done and can go back to the main page
 PF_HERE=here
-PF_VKEY=Otherwise set Up Third-Party Virtual Key
+PF_VKEY="Set Up Third-Party Virtual Key"
+PF_SUBSCRIPTION="Subscribe to receive data from Tesla"
+
+#changecarname.php
+CarNameTitle=Change car name
+TextCarName=You can change car name here
+CarName=New Name
 
 #settings.php
 Please choose your vehicle=Please choose your vehicle
@@ -280,15 +303,15 @@ URL Admin Panel=Admin Panel URL
 All=All
 Stable=Stable
 None=None
-Enable=Enable
+Enable="Turn on"
 Celsius=Celsius
 Fahrenheit=Fahrenheit
 URL Grafana=Grafana URL
 Teslalogger HTTP Port=Teslalogger HTTP Port
 Zoom Level=Zoom Level
 ScanMyTesla integration=ScanMyTesla integration
-Main Car=Main Car
-Car Name=Car Name
+Main Car="Main Vehicle"
+Car Name="Vehicle Name"
 ScanMyTesla last received=ScanMyTesla last received
 Tasker Token=Tasker Token
 Tasker URL=Tasker URL
@@ -320,6 +343,7 @@ Verbrauch [kWh]=Consumed kWh
 Ø Verbrauch [kWh]=Avg. Consumption kWh
 Anzahl Trips=Trips Count
 Trip Monatsstatistik=Trip Monthly Statistics
+Trip Jahresstatistik="Trip Anual Statistics"
 Jahr/Monat=Year/Month
 Zellspannungen 01-20 - ScanMyTesla="Cell Voltages 01–20 — ScanMyTesla"
 Zellspannungen 21-40 - ScanMyTesla="Cell Voltages 21–40 — ScanMyTesla"
@@ -349,6 +373,7 @@ kWh laut Zähler / Rechnung=kWh according to meter / invoice
 Wirkungsgrad=Efficiency
 
 #Timeline Plugin.json
+Dauer=Duration
 Parking=Parking
 Driving=Driving
 Missing=Missing
@@ -406,8 +431,8 @@ ABRPTitle=Abetterrouteplanner Link
 TextABRP=You can setup a link from Teslalogger to Abetterrouteplanner to avoid giving your Tesla credentials to a 3rd Party. Another benefit is to minimize the possibility to prevent the car from going to sleep if more than one service is using your credentials.
 ABRP1=Create an Abetterrouteplanner account
 ABRP2=Go to Settings
-ABRP3=Choose your car
-ABRP4=Save your car to your account
+ABRP3="Choose your vehicle"
+ABRP4="Save vehicle to your account"
 ABRP5="Give your vehicle a name"
 ABRP6=Click on "Link Generic" to get a ABRP token
 ABRP7=Copy the token and click "Done"
@@ -415,7 +440,7 @@ ABRP8=Insert the token in Teslalogger
 ABRP9=Check if the Teslalogger is connected
 ABRPYT=Check YouTube tutorial for live demo
 ABRPToken=Abetterrouteplanner Token
-Enabled=Enabled
+Enabled="Turned on"
 
 #wallbox.php
 Wallbox=Wallbox
@@ -431,11 +456,11 @@ Vehicle kWh=Vehicle kWh
 
 #mqtt.php
 MQTTSettings=MQTT settings
-MQTTSettingsInfo=MQTT Host is mandatory. All other settings are optional
+MQTTSettingsInfo="MQTT Host is mandatory. All other settings are optional."
 TopicStructure=Topic structure:
 MQTT1="All values in one JSON (if turned on): "_QQ_"teslalogger/json/CAR_VIN/currentjson"_QQ_""
-MQTT2=All values as subtopics (if activated): "teslalogger/cars/CAR_VIN/ideal_battery_range_km"
-MQTT3="teslalogger" is parametrizable in field "Topic"
+MQTT2="All values as subtopics (if turned on): "_QQ_"teslalogger/cars/CAR_VIN/ideal_battery_range_km"_QQ_""
+MQTT3=""_QQ_"Teslalogger"_QQ_" is parametrizable in the field "_QQ_"Topic"_QQ_""
 MQTT4="CAR_VIN" is VIN of your car
 MQTT5="ideal_battery_range_km" are single topics
 ADDescription=AutoDiscovery:
@@ -452,6 +477,10 @@ Singletopics=Publish single topics
 ClientID=ClientID
 AutoDiscovery=AutoDiscovery
 AutoDiscoveryTopic=AutoDiscovery Topic
+
+#komoot.php
+KomootSettings=Komoot Settings
+KomootSettingsInfo=Username (eMail) and password for your Komoot account
 
 #superchargebingo.php
 SuperChargeBingo=SuperChargeBingo

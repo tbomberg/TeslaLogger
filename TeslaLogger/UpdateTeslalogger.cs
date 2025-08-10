@@ -5,13 +5,13 @@ using System.IO;
 using MySql.Data.MySqlClient;
 using System.Text.RegularExpressions;
 using System.Reflection;
-
 using System.Threading;
 using System.Net;
 using System.IO.Compression;
 using Exceptionless;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace TeslaLogger
 {
@@ -141,6 +141,8 @@ namespace TeslaLogger
 
                 GetChargingHistoryV2Service.CheckSchema();
 
+                Komoot.CheckSchema();
+
                 Logfile.Log("DBSchema Update finished.");
 
                 // end of schema update
@@ -263,7 +265,7 @@ namespace TeslaLogger
 
                 DBHelper.EnableMothership();
 
-                if (KVS.Get("UpdateAllDrivestateData", out int UpdateAllDrivestateDataInt) == KVS.NOT_FOUND)
+                if (KVS.Get("UpdateAllDrivestateData", out int UpdateAllDrivestateDataInt) == KVS.NOT_FOUND || UpdateAllDrivestateDataInt < 2)
                 {
                     UpdateAllDrivestateDateThread();
                 }
@@ -280,7 +282,6 @@ namespace TeslaLogger
                     CreateEmptyWeatherIniFile();
                     CheckBackupCrontab();
                 }, CancellationToken.None, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
-
             }
             catch (Exception ex)
             {
@@ -383,6 +384,35 @@ namespace TeslaLogger
                 UpdateTeslalogger.AssertAlterDB();
                 DBHelper.ExecuteSQLQuery(sql);
                 Logfile.Log("CREATE TABLE OK");
+            }
+
+            if (!DBHelper.TableExists("celltemperature"))
+            {
+                string sql = @"CREATE 
+                    VIEW `celltemperature` AS
+                        SELECT 
+                            `can`.`CarID` AS `carid`,
+                            `can`.`datum` AS `date`,
+                            `can`.`val` AS `CellTemperature`,
+                            1 AS `source`
+                        FROM
+                            `can`
+                        WHERE
+                            `can`.`id` = 3 
+                        UNION SELECT 
+                            `battery`.`CarID` AS `carid`,
+                            `battery`.`date` AS `datum`,
+                            `battery`.`ModuleTempMin` AS `CellTemperature`,
+                            2 AS `source`
+                        FROM
+                            `battery`
+                        WHERE
+                            `battery`.`ModuleTempMin` IS NOT NULL";
+
+                Logfile.Log(sql);
+                UpdateTeslalogger.AssertAlterDB();
+                DBHelper.ExecuteSQLQuery(sql);
+                Logfile.Log("CREATE VIEW OK");
             }
         }
 
@@ -683,7 +713,8 @@ PRIMARY KEY(id)
                 Logfile.Log("CREATE TABLE mothershipcommands (id int NOT NULL AUTO_INCREMENT, command varchar(50) NOT NULL, PRIMARY KEY(id))");
                 DBHelper.ExecuteSQLQuery("CREATE TABLE mothershipcommands (id int NOT NULL AUTO_INCREMENT, command varchar(50) NOT NULL, PRIMARY KEY(id))");
                 Logfile.Log("CREATE TABLE OK");
-            } 
+            }
+            DBHelper.ExecuteSQLQuery("ALTER TABLE mothershipcommands MODIFY COLUMN command varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL;");
         }
 
         private static void CheckDBSchema_mothership()
@@ -699,6 +730,12 @@ PRIMARY KEY(id)
                 Logfile.Log("ALTER TABLE mothership ADD COLUMN httpcode int NULL");
                 AssertAlterDB();
                 DBHelper.ExecuteSQLQuery("ALTER TABLE mothership ADD COLUMN httpcode int NULL", 600);
+            }
+            if (!DBHelper.ColumnExists("mothership", "carid"))
+            {
+                Logfile.Log("ALTER TABLE mothership ADD COLUMN carid INT UNSIGNED NULL DEFAULT NULL");
+                AssertAlterDB();
+                DBHelper.ExecuteSQLQuery("ALTER TABLE mothership ADD COLUMN carid INT UNSIGNED NULL DEFAULT NULL", 6000);
             }
         }
 
@@ -958,6 +995,27 @@ PRIMARY KEY(id)
                 DBHelper.ExecuteSQLQuery("ALTER TABLE charging ADD COLUMN battery_range_km DOUBLE NULL", 600);
             }
 
+            if (!DBHelper.ColumnExists("charging", "charger_actual_current_calc"))
+            {
+                Logfile.Log("ALTER TABLE charging ADD COLUMN charger_actual_current_calc INT NULL");
+                AssertAlterDB();
+                DBHelper.ExecuteSQLQuery("ALTER TABLE charging ADD COLUMN charger_actual_current_calc INT NULL");
+            }
+
+            if (!DBHelper.ColumnExists("charging", "charger_phases_calc"))
+            {
+                Logfile.Log("ALTER TABLE charging ADD COLUMN charger_phases_calc TINYINT(1) NULL");
+                AssertAlterDB();
+                DBHelper.ExecuteSQLQuery("ALTER TABLE charging ADD COLUMN charger_phases_calc TINYINT(1) NULL", 600);
+            }
+
+            if (!DBHelper.ColumnExists("charging", "charger_power_calc_w"))
+            {
+                Logfile.Log("ALTER TABLE charging ADD COLUMN charger_power_calc_w INT NULL");
+                AssertAlterDB();
+                DBHelper.ExecuteSQLQuery("ALTER TABLE charging ADD COLUMN charger_power_calc_w INT NULL", 600);
+            }
+
             InsertCarID_Column("charging"); 
         }
 
@@ -1140,6 +1198,20 @@ PRIMARY KEY(id)
                 AssertAlterDB();
                 DBHelper.ExecuteSQLQuery(@"ALTER TABLE `cars` ADD `needFleetAPI` TINYINT UNSIGNED NOT NULL DEFAULT '0'", 600);
             }
+
+            if (!DBHelper.ColumnExists("cars", "access_type"))
+            {
+                Logfile.Log("ALTER TABLE cars ADD Column access_type");
+                AssertAlterDB();
+                DBHelper.ExecuteSQLQuery(@"ALTER TABLE `cars` ADD `access_type` varchar(20) NULL", 600);
+            }
+
+            if (!DBHelper.ColumnExists("cars", "virtualkey")) 
+            {
+                Logfile.Log("ALTER TABLE cars ADD Column virtualkey");
+                AssertAlterDB();
+                DBHelper.ExecuteSQLQuery(@"ALTER TABLE `cars` ADD `virtualkey` TINYINT UNSIGNED  NULL DEFAULT '0'", 600);
+            }
         }
 
         private static void CheckDBSchema_can()
@@ -1266,10 +1338,24 @@ PRIMARY KEY(id)
                 if (File.Exists("BRANCH"))
                 {
                     var branch = File.ReadAllText("BRANCH").Trim();
-                    Logfile.Log($"YOU ARE USING BRANCH: " + branch);
 
-                    GitHubURL = "https://github.com/bassmaster187/TeslaLogger/archive/refs/heads/" + branch + ".zip";
-                    master = branch;
+                    if (WebHelper.BranchExists(branch, out HttpStatusCode statusCode))
+                    {
+                        Logfile.Log($"YOU ARE USING BRANCH: " + branch);
+
+                        GitHubURL = "https://github.com/bassmaster187/TeslaLogger/archive/refs/heads/" + branch + ".zip";
+                        master = branch;
+                    }
+                    else
+                    {
+                        Logfile.Log($"BRANCH NOT EXIST: " + branch);
+
+                        if (statusCode == HttpStatusCode.NotFound)
+                        {
+                            File.Delete("BRANCH");
+                            Logfile.Log("BRANCH file deleted!");
+                        }
+                    }
                 }
 
 
@@ -1347,7 +1433,7 @@ PRIMARY KEY(id)
                     for (int x = 1; x < 10; x++)
                     {
                         Logfile.Log("git clone: try " + x);
-                        Tools.ExecMono("git", "clone --progress https://github.com/bassmaster187/TeslaLogger /etc/teslalogger/git/", true, true);
+                        Tools.ExecMono("git", "clone --depth=1 --progress https://github.com/bassmaster187/TeslaLogger /etc/teslalogger/git/", true, true);
 
                         if (Directory.Exists("/etc/teslalogger/git/TeslaLogger/GrafanaPlugins"))
                         {
@@ -1383,26 +1469,45 @@ PRIMARY KEY(id)
                     Logfile.Log(ex.ToString());
                 }
 
-                Tools.CopyFilesRecursively(new DirectoryInfo("/etc/teslalogger/git/TeslaLogger/bin"), new DirectoryInfo("/etc/teslalogger"), "TeslaLogger.exe");
-
-                try
+                // running in TeslaLogger.exe, prepare update in separate process
+                if (System.Diagnostics.Process.GetCurrentProcess().ProcessName.Equals("TeslaLogger"))
                 {
-                    Tools.CopyFile("/etc/teslalogger/git/TeslaLogger/bin/TeslaLogger.exe", "/etc/teslalogger/TeslaLogger.exe");
+                    try
+                    {
+                        Tools.CopyFile("/etc/teslalogger/git/TeslaLogger/bin/TLUpdate.exe", "/etc/teslalogger/TLUpdate.exe");
+                        foreach (Car car in Car.Allcars)
+                        {
+                            car.CurrentJSON.ToKVS();
+                        }
+                        ExceptionlessClient.Default.CreateLog("Install", "Update finished!").FirstCarUserID().Submit();
+                        await ExceptionlessClient.Default.ProcessQueueAsync();
+                        using (Process process = new Process
+                        {
+                            StartInfo = new ProcessStartInfo
+                            {
+                                FileName = "/etc/teslalogger/TLUpdate.exe",
+                                UseShellExecute = false,
+                                RedirectStandardOutput = true,
+                                CreateNoWindow = true
+                            }
+                        })
+                        {
+                            Logfile.Log(" *** starting TLUpdate.exe now ***");
+                            process.Start();
+                            while (!process.StandardOutput.EndOfStream)
+                            {
+                                Logfile.Log(process.StandardOutput.ReadLine());
+                            }
+                            process.WaitForExit();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ex.ToExceptionless().FirstCarUserID().Submit();
+                        Logfile.Log(ex.ToString());
+                    }
                 }
-                catch (Exception ex)
-                {
-                    ex.ToExceptionless().FirstCarUserID().Submit();
-                    Logfile.Log(ex.ToString());
-                }
 
-                ExceptionlessClient.Default.CreateLog("Install", "Update finished!").FirstCarUserID().Submit();
-                ExceptionlessClient.Default.ProcessQueueAsync();
-
-                Logfile.Log("End update");
-
-                Logfile.Log("Rebooting");
-
-                Tools.ExecMono("reboot", "");
             }
         }
 
@@ -2653,6 +2758,12 @@ PRIMARY KEY(id)
                             else
                             {
                                 Logfile.Log("Rebooting");
+
+                                foreach (Car car in Car.Allcars)
+                                {
+                                    car.CurrentJSON.ToKVS();
+                                }
+
                                 Tools.ExecMono("reboot", "");
                             }
                         }
@@ -2674,12 +2785,13 @@ PRIMARY KEY(id)
 
         public static bool UpdateNeeded(string currentVersion, string online_version, Tools.UpdateType updateType)
         {
-            if (updateType == Tools.UpdateType.none)
+            /*
+            if (updateType == Tools.UpdateType.none) // None isn't supported anymore, because Tesla may force me to do an update
             {
                 return false;
-            }
+            }*/
 
-            if (updateType == Tools.UpdateType.stable || updateType == Tools.UpdateType.all)
+            if (updateType == Tools.UpdateType.stable || updateType == Tools.UpdateType.all || updateType == Tools.UpdateType.none)
             {
                 Version cv = new Version(currentVersion);
                 Version ov = new Version(online_version);

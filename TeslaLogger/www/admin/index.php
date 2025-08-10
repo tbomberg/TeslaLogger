@@ -2,13 +2,25 @@
 require_once("redirect.php");
 require_once("language.php");
 require_once("tools.php");
-session_start();
+
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+include "menu.php";
 global $display_name;
+global $carNeedFleetAPI;
+global $carVIN;
+global $carNeedSubscription;
+global $fleetapiinfo;
+global $car_inactive;
+
+$carNeedSubscription = false;
 $carid = GetDefaultCarId();
 if (isset($_REQUEST["carid"]))
 {
-	$_SESSION["carid"] = $_REQUEST["carid"];
-	$carid = $_REQUEST["carid"];
+	$_SESSION["carid"] = intval($_REQUEST["carid"]);
+	$carid = intval($_REQUEST["carid"]);
 }
 else
 {
@@ -106,30 +118,45 @@ else
 		  url: "current_json.php",
 		  dataType: "json"
 		  }).done(function( jsonData ) {
-			if (LengthUnit == "mile")
-			{
-				if ( Range == 'IR'){
-					$('#ideal_battery_range_km').text((jsonData["ideal_battery_range_km"] / km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
-					$('#full_battery_range_km').text((jsonData["ideal_battery_range_km"]/jsonData["battery_level"]*100/km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
+			if ("ideal_battery_range_km" in jsonData && "battery_level" in jsonData && "battery_range_km" in jsonData && "odometer" in jsonData) {
+				if (LengthUnit == "mile")
+				{
+					if ( Range == 'IR')
+					{
+						$('#ideal_battery_range_km').text((jsonData["ideal_battery_range_km"] / km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
+						$('#full_battery_range_km').text((jsonData["ideal_battery_range_km"]/jsonData["battery_level"]*100/km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
+					}
+					else
+					{
+						$('#ideal_battery_range_km').text((jsonData["battery_range_km"] / km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
+						$('#full_battery_range_km').text((jsonData["battery_range_km"]/jsonData["battery_level"]*100/km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
+					}
+					$('#odometer').text((jsonData["odometer"] / km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
 				}
 				else
 				{
-					$('#ideal_battery_range_km').text((jsonData["battery_range_km"] / km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
-					$('#full_battery_range_km').text((jsonData["battery_range_km"]/jsonData["battery_level"]*100/km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
+					if ( Range == 'IR')
+					{
+						$('#ideal_battery_range_km').text(jsonData["ideal_battery_range_km"].toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
+						$('#full_battery_range_km').text((jsonData["ideal_battery_range_km"]/jsonData["battery_level"]*100).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
+					}
+					else
+					{	
+						$('#ideal_battery_range_km').text(jsonData["battery_range_km"].toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
+						$('#full_battery_range_km').text((jsonData["battery_range_km"]/jsonData["battery_level"]*100).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
+					}
+					$('#odometer').text((jsonData["odometer"]).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
 				}
-				$('#odometer').text((jsonData["odometer"] / km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
 			}
-			else
-			{
-				if ( Range == 'IR'){
-					$('#ideal_battery_range_km').text(jsonData["ideal_battery_range_km"].toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
-					$('#full_battery_range_km').text((jsonData["ideal_battery_range_km"]/jsonData["battery_level"]*100).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
+			else if ("odometer" in jsonData) {
+				if (LengthUnit == "mile")
+				{
+					$('#odometer').text((jsonData["odometer"] / km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("mi"); ?>");
 				}
 				else
-				{	$('#ideal_battery_range_km').text(jsonData["battery_range_km"].toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
-					$('#full_battery_range_km').text((jsonData["battery_range_km"]/jsonData["battery_level"]*100).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
+				{
+					$('#odometer').text((jsonData["odometer"]).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
 				}
-				$('#odometer').text((jsonData["odometer"]).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}) + " <?php t("km"); ?>");
 			}
 
 			if (Display100pctEnable == "true")
@@ -142,12 +169,36 @@ else
 			}
 
 			$('#battery_level').text(jsonData["battery_level"]);
-			var car_version = jsonData["car_version"];
-			car_version = car_version.substring(0,car_version.lastIndexOf(" "));
-			$('#car_version').text(car_version);
-			$('#car_version_link').attr("href", "https://www.notateslaapp.com/software-updates/version/"+ car_version +"/release-notes");
+			if (jsonData["car_version"]) {
+				var car_version = jsonData["car_version"];
+				car_version = car_version.substring(0,car_version.lastIndexOf(" "));
+				$('#car_version').text(car_version);
+				$('#car_version_link').attr("href", "https://www.notateslaapp.com/software-updates/version/"+ car_version +"/release-notes");
+			}
 
-			if (jsonData["charging"])
+			if (car_inactive)
+			{
+				$('#car_status').html("<font color='red'><?php t("Inactive"); ?></font>");
+				$('#car_statusLabel').text("<?php t("Status"); ?>:");
+				hideSMT();
+			}
+			else if (jsonData["FatalError"])
+			{
+				if (jsonData["FatalError"] == "missing_key")
+				{
+					var missingkeytext = "<?php t("FatalErrorMissingKey"); ?>";
+					missingkeytext = missingkeytext.replace("{LINK}", '<a href="https://www.tesla.com/_ak/teslalogger.de" target="_blank">LINK</a>');
+
+					$('#car_status').html('<font color="red">'+missingkeytext+'</font>');
+				}
+				else
+					$('#car_status').html("<font color='red'>"+ jsonData["FatalError"] +"</font>");
+
+				$('#car_statusLabel').html("<font color='red'><?php t("Fatal Error"); ?>: </font>");
+				
+				updateSMT(jsonData);
+			}
+			else if (jsonData["charging"])
 			{
 				var ttfc = jsonData["time_to_full_charge"];
 				var hour = parseInt(ttfc);
@@ -160,8 +211,7 @@ else
 
 				$('#car_statusLabel').text("<?php t("Charging"); ?>:");
 				$('#car_status').html(jsonData["charger_power"] + " kW / +" + jsonData["charge_energy_added"] + " kWh<br>" +
-				jsonData["charger_voltage"]+"V / " + jsonData["charger_actual_current"]+"A / "+
-				jsonData["charger_phases"]+"P<br><?php t("Done"); ?>: "+ hour +"h "+minute+"m <br><?php t("Done at"); ?>: " + datetime +  " / " + jsonData["charge_limit_soc"] +"%");
+                                        "<?php t("Done"); ?>: "+ hour +"h "+minute+"m <br><?php t("Done at"); ?>: " + datetime +  " / " + jsonData["charge_limit_soc"] +"%");
 
 				updateSMT(jsonData);
 			}
@@ -170,14 +220,9 @@ else
 				$('#car_statusLabel').text("<?php t("Driving"); ?>:");
 				var str = "";
 				if (LengthUnit == "mile")
-					str = (jsonData["speed"]/ km2mls).toFixed(0) + " mph / "
+					str = (jsonData["speed"]/ km2mls).toFixed(0) + " mph"
 				else
-					str = jsonData["speed"] + " <?php t("km/h"); ?> / ";
-
-				if (PowerUnit == "kw")
-					str += (jsonData["power"] / 1.35962).toFixed(0) + " <?php t("kW"); ?>";
-				else
-					str += jsonData["power"] + " <?php t("PS"); ?>";
+					str = jsonData["speed"] + " <?php t("km/h"); ?>";
 
 				if (jsonData["active_route_destination"])
 				{
@@ -200,7 +245,7 @@ else
 				var text = "<?php t("Online"); ?>";
 
 				if (jsonData["is_preconditioning"])
-					text = text + "<br><?php t("Preconditioning"); ?> " + jsonData["inside_temperature"] +"°C";
+					text = text + "<br><?php t("Preconditioning"); ?> " + parseFloat(jsonData["inside_temperature"]).toFixed(1) +"°C";
 
 				if (jsonData["sentry_mode"])
 					text = text + "<br><?php t("Sentry Mode"); ?>";
@@ -235,34 +280,24 @@ else
 				hideSMT();
 			}
 
-			if (LengthUnit == "mile")
-			{
-				$("#max_speed").text((jsonData["trip_max_speed"]/ km2mls).toFixed(0));
-				$("#lt_kmh").text("mph");
+			if (jsonData["trip_max_speed"] && jsonData["trip_avg_kwh"] && jsonData["trip_distance"]) {
+				if (LengthUnit == "mile")
+				{
+					$("#max_speed").text((jsonData["trip_max_speed"]/ km2mls).toFixed(0));
+					$("#lt_kmh").text("mph");
 
-				$("#trip_avg_kwh").text((jsonData["trip_avg_kwh"]* km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}));
-				$("#lt_whkm").text("wh/mi");
+					$("#trip_avg_kwh").text((jsonData["trip_avg_kwh"]* km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}));
+					$("#lt_whkm").text("wh/mi");
 
-				$("#trip_distance").text((jsonData["trip_distance"]/km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}));
-				$("#lt_trip_distance_km").text("mi");
-			}
-			else
-			{
-				$("#max_speed").text(jsonData["trip_max_speed"]);
-
-				$("#trip_avg_kwh").text(jsonData["trip_avg_kwh"].toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}));
-				$("#trip_distance").text(jsonData["trip_distance"].toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}));
-			}
-
-			if (PowerUnit == "kw")
-			{
-				$("#max_power").text((jsonData["trip_max_power"] / 1.35962).toFixed(0));
-				$("#lt_trip_PS").text("<?php t("kW"); ?>");
-			}
-			else
-			{
-				$("#max_power").text(jsonData["trip_max_power"]);
-				$("#lt_trip_PS").text("<?php t("PS"); ?>");
+					$("#trip_distance").text((jsonData["trip_distance"]/km2mls).toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}));
+					$("#lt_trip_distance_km").text("mi");
+				}
+				else
+				{
+					$("#max_speed").text(jsonData["trip_max_speed"]);
+					$("#trip_avg_kwh").text(jsonData["trip_avg_kwh"].toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}));
+					$("#trip_distance").text(jsonData["trip_distance"].toLocaleString(loc,{maximumFractionDigits:1, minimumFractionDigits: 1}));
+				}
 			}
 
 			var ts2 = new Date(Date.parse(jsonData["trip_start_dt"]));
@@ -281,7 +316,7 @@ else
 
 			$("#trip_duration_sec").text(min + ":" + sec);
 
-			if (jsonData["software_update_status"].length > 0)
+			if (jsonData["software_update_status"] && jsonData["software_update_status"].length > 0)
 			{
 				$("#SoftwareUpdateRow").show();
 				var temp = jsonData["software_update_status"];
@@ -410,75 +445,13 @@ else
 
 	}
 
-function ShowInfo()
-{
 	<?php
-	$prefix = "/etc/teslalogger/";
-    if (isDocker())
-		$prefix = "/tmp/";
-
-	if (file_exists($prefix."cmd_gosleep_$carid.txt"))
-	{?>
-		$("#InfoText").html("<h1><?php t("TextSuspendTeslalogger"); ?></h1>");
-		$(".HeaderT").show();
-		$("#PositiveButton").text("<?php t("Resume Teslalogger"); ?>");
-		$("#PositiveButton").click(function(){window.location.href='/wakeup.php?id=' + <?= $carid ?>;});
-		$("#NegativeButton").hide();
-	<?php
-	}
-	else if (!file_exists("/etc/teslalogger/sharedata.txt") &&
-	!file_exists("/etc/teslalogger/nosharedata.txt") &&
-	!file_exists("/tmp/sharedata.txt") &&
-	!file_exists("/tmp/nosharedata.txt")
-	)
-	{?>
-		$("#InfoText").html("<?php t("TextShare"); ?>");
-		$(".HeaderT").show();
-		$("#PositiveButton").click(function(){window.location.href='settings_share.php?a=yes';});
-		$("#NegativeButton").click(function(){window.location.href='settings_share.php?a=no';});
-	<?php
-	}
-	else if(isDocker() && GrafanaVersion() != "10.0.1")
-	{?>
-		<?php
-		$t1=get_text("Please update to latest docker-compose.yml file. Check: {LINK}");
-		$t1=str_replace("{", "<a href='https://github.com/bassmaster187/TeslaLogger/blob/master/docker_setup.md#docker-update--upgrade'>", $t1);
-		$t1=str_replace("}", '</a>', $t1);
-		?>
-		$("#InfoText").html("<h1><?php echo $t1; ?></h1>");
-		$(".HeaderT").show();
-		$("#PositiveButton").click(function(){window.location.href='https://github.com/bassmaster187/TeslaLogger/blob/master/docker_setup.md#docker-update--upgrade';});
-		$("#NegativeButton").hide();
-	<?php
-	} else if (isDocker() && !DatasourceUpdated())
-	{?>
-		$("#InfoText").html("<h1>Please update datasource.yaml file. Check: <a href='https://github.com/bassmaster187/TeslaLogger/blob/master/docker_setup.md#docker-update--upgrade'>LINK</a></h1>");
-		$(".HeaderT").show();
-		$("#PositiveButton").click(function(){window.location.href='https://github.com/bassmaster187/TeslaLogger/blob/master/docker_setup.md#docker-update--upgrade';});
-		$("#NegativeButton").hide();
-	<?php
-	}
-	else if (!files_are_equal("/etc/teslalogger/changelog.md","/tmp/changelog.md"))
-	{?>
-		$.get("changelog_plain.php").success(function(data){
-			$("#InfoText").html(data);
-		});
-
-		$(".HeaderT").show();
-		$("#PositiveButton").text("<?php t("OK"); ?>");
-		$("#PositiveButton").click(function(){window.location.href='changelogread.php';});
-		$("#NegativeButton").hide();
-	<?php
-	}
 	?>
-
-}
   </script>
 
   </head>
   <body>
   <?php
-    include "menu.php";
     echo(menu("Teslalogger"));
 ?>
 
@@ -501,6 +474,31 @@ function ShowInfo()
 			<img id="unlocked"class="caricons" src="img/unlocked.png" title="Unlocked">
 		</td>
 	  </thead>
+	  <?php
+	  	if ($carNeedFleetAPI)
+	  		echo("<tr><td><font color='red'><b>".get_text("FleetAPI")."</b></font></td><td><a href='password_fleet.php?id=$carid&vin=$carVIN'>".get_text("FleetAPIRequired")." ⚠️</a></td></tr>");
+		else if ($carNeedSubscription)
+		{
+			?>
+			<!-- car need subscription -->
+			<tr id="subscriptioninfo" style='display: none;'><td><font color='red'><b><?php t("Subscription") ?></b></font></td><td><a href='https://buy.stripe.com/9AQaHNdU33k29Vu144?client_reference_id=<?=$carVIN?>'><?php t("SubscriptionRequired") ?>⚠️</a><br><a href="javascript:showInfoRestricted();">Funktion eingeschränkt⚠️</a></td></tr>
+			<script>
+				$(document).ready(function(){
+					$.ajax({
+						url: "subscription-check.php?vin=<?=$carVIN?>",
+					}).done(function(data) {
+						if (data == "No subscription") {
+							$("#subscriptioninfo").show();
+						} 
+                    }).fail(function(jqXHR, textStatus, errorThrown) {
+                        console.error("Error: " + textStatus, errorThrown);
+                    });
+                });
+            </script>
+			<?php
+		}
+	
+	  ?>
 	  <tr><td width="130px"><b><span id="car_statusLabel"></span></b></td><td width="180px"><span id="car_status"></span></td></tr>
 	  <tr id='CellTempRow'><td><b><?php t("Cell Temp"); ?>:</b></td><td><span id="CellTemp"></span></td></tr>
 	  <tr id='BMSMaxChargeRow'><td><b><?php t("Max Charge"); ?>:</b></td><td><span id="BMSMaxCharge"></span></td></tr>
@@ -522,7 +520,7 @@ function ShowInfo()
 	  <tr><td><b><?php t("Distance"); ?>:</b></td><td><span id="trip_distance">---</span> <span id="lt_trip_distance_km"><?php t("km"); ?></span></td></tr>
 	  <tr><td><b><?php t("Consumption"); ?>:</b></td><td><span id="trip_kwh">---</span> <?php t("kWh"); ?></td></tr>
 	  <tr><td><b><?php t("Ø Consumption"); ?>:</b></td><td><span id="trip_avg_kwh">---</span> <span id="lt_whkm"><?php t("Wh/km"); ?></span></td></tr>
-	  <tr><td><b><?php t("Max km/h"); ?> / <?php t("PS"); ?>:</b></td><td><span id="max_speed">---</span> <span id="lt_kmh"><?php t("km/h"); ?></span> / <span id="max_power">---</span> <span id="lt_trip_PS"><span></td></tr>
+	  <tr><td><b><?php t("Max km/h"); ?>:</b></td><td><span id="max_speed">---</span> <?php t("km/h"); ?></span> </td></tr>
   </table>
   </div>
 
@@ -542,7 +540,8 @@ function ShowInfo()
 	else
 		$installed = getTeslaloggerVersion("/etc/teslalogger/git/TeslaLogger/Properties/AssemblyInfo.cs");
 
-	$branch = file_get_contents("/etc/teslalogger/BRANCH");
+	if (file_exists("/etc/teslalogger/BRANCH"))
+		$branch = file_get_contents("/etc/teslalogger/BRANCH");
 
 	if (!empty($branch))
 	{
@@ -592,5 +591,14 @@ function getZoomLevel()
 
   ?>
   </div>
+  <script>
+	var car_inactive = <?php 
+	if ($car_inactive === "1")
+	 	echo "true";
+	else 
+		echo "false";?>;
+
+	<?php require_once("info.php"); ?>
+  </script>
   </body>
 </html>

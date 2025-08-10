@@ -1,4 +1,8 @@
 <?PHP
+if (session_status() == PHP_SESSION_NONE) {
+	session_start();
+}
+
 require_once("language.php");
 require_once("tools.php");
 function full_path()
@@ -22,6 +26,12 @@ function menu($title, $prefix = "")
     $car = "";
     $tasker_token = "";
     global $display_name;
+	global $carNeedFleetAPI;
+	global $carNeedSubscription;
+	global $carVIN;
+	global $fleetapiinfo;
+	global $car_inactive;
+	global $vehicle_location;
 
     $current_carid = $_SESSION["carid"];
     if (!isset($current_carid))
@@ -34,17 +44,56 @@ function menu($title, $prefix = "")
     $jcars = json_decode($allcars);
     if ($jcars !== null)
     {
+		$fleetapiinfo = false;
         foreach ($jcars as $k => $v) {
             if ($v->{"id"} == $current_carid)
             {
                 $display_name = $v->{"display_name"};
                 $tasker_token = $v->{"tasker_hash"};
                 $car = $v->{"model_name"};
+				$carVIN = $v->{"vin"};
+				$car_inactive = $v->{"inactive"};
+				$vehicle_location = $v->{"vehicle_location"};
 
                 if (strlen($display_name) == 0)
                     $display_name = "Car ".$v->{"id"};
             }
-        }
+
+			$carid = $v->{"id"};
+
+			if ($v->{"inactive"} == 0) // info will be shown only if the car is active
+			{
+				$cartype = $v->{"car_type"};
+				$NeedSubscription = $v->{"SupportedByFleetTelemetry"} === "1";
+
+				if ($v->{"fleetAPI"} == 0)
+				{ 	
+					if ($NeedSubscription) // old Model S/X doesn't need a subscription 
+					{
+						echo ("<!-- fleetapiinfo: cartype: $cartype - ID: $carid - Name: $car -->\r\n");
+						$fleetapiinfo = true;
+						if ($v->{"id"} == $current_carid)
+						{
+							$carNeedFleetAPI = true;
+							$carNeedSubscription = true;
+							echo("<!-- car need subscription true 2-->\r\n");
+						}
+					}
+					else
+						$carNeedSubscription = false;
+				}
+				else
+				{
+					if ($v->{"id"} == $current_carid)
+					{
+						$carNeedSubscription = true;
+						echo("<!-- car need subscription true 3-->\r\n");
+					}
+				}
+			}
+			else
+				echo ("<!-- fleetapiinfo: car inactive: ID: $carid - Name: $car -->\r\n");
+		}
     }
 
     $ref = "?token=" . $tasker_token . "&ref=" . full_path()."&car=".$car;
@@ -96,7 +145,7 @@ function menu($title, $prefix = "")
 								echo(str_repeat("\t",7));
 								$urlpart = $dlargs[1];
 								$urlpart = str_replace("DEBUG Wh/TR","debug-wh-tr",$urlpart);
-								echo('<li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="' . $urlpart .'">');
+								echo('<li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="' . $urlpart .'?orgId=1&var-Car='.$current_carid.'">');
 								echo str_replace("CO2","CO<sub>2</sub>",$dlargs[0]);
 								echo('</a></li>');
 								echo("\n");
@@ -130,6 +179,7 @@ function menu($title, $prefix = "")
 							<li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="<?php echo $prefix; ?>journeys.php?carid=<?= $current_carid ?>"><?php t("Journeys"); ?></a></li>
 							<li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="<?php echo $prefix; ?>dashboard.php?carid=<?= $current_carid ?>"><?php t("Dashboard"); ?></a></li>
 							<li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="<?php echo $prefix; ?>mqtt.php"><?php t("MQTTSettings"); ?></a></li>
+							<li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="<?php echo $prefix; ?>komoot.php"><?php t("KomootSettings"); ?></a></li>
 							<li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="<?php echo $prefix; ?>abrp.php?carid=<?= $current_carid ?>"><?php t("Abetterrouteplanner"); ?></a></li>
 							<li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="<?php echo $prefix; ?>superchargebingo.php?carid=<?= $current_carid ?>"><?php t("SuperChargeBingo"); ?></a></li>
 							<li class="menu-item menu-item-type-custom menu-item-object-custom"><a href="<?php echo $prefix; ?>wallbox.php?carid=<?= $current_carid ?>"><?php t("Wallbox"); ?></a></li>

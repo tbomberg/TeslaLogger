@@ -1,6 +1,4 @@
-﻿
-using System;
-using Exceptionless;
+﻿using System;
 
 namespace TeslaLogger
 {
@@ -39,6 +37,10 @@ namespace TeslaLogger
         {
             if (type == "openwb")
                 return new ElectricityMeterOpenWB(host, paramater);
+            else if (type == "openwb2")
+                return new ElectricityMeterOpenWB2(host, paramater);
+            else if (type == "cfos")
+                return new ElectricityMeterCFos(host, paramater);
             else if (type == "go-e")
                 return new ElectricityMeterGoE(host, paramater);
             else if (type == "tesla-gen3")
@@ -51,6 +53,10 @@ namespace TeslaLogger
                 return new ElectricityMeterKeba(host, paramater);
             else if (type == "evcc")
                 return new ElectricityMeterEVCC(host, paramater);
+            else if (type == "smartevse3")
+                return new ElectricityMeterSmartEVSE3(host, paramater);
+            else if (type == "warp")
+                return new ElectricityMeterWARP(host, paramater);
 
             return null;
         }

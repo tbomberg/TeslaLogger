@@ -13,11 +13,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web;
-
 using MySql.Data.MySqlClient;
 using Exceptionless;
 using Newtonsoft.Json;
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
 
 namespace TeslaLogger
 {
@@ -52,7 +52,7 @@ namespace TeslaLogger
 
         public enum UpdateType { all, stable, none };
 
-        internal static Queue<Tuple<DateTime, string>> debugBuffer = new Queue<Tuple<DateTime, string>>();
+        internal static ConcurrentQueue<Tuple<DateTime, string>> debugBuffer = new ConcurrentQueue<Tuple<DateTime, string>>();
 
         public static void SetThreadEnUS()
         {
@@ -265,9 +265,9 @@ namespace TeslaLogger
             try
             {
                 debugBuffer.Enqueue(new Tuple<DateTime, string>(DateTime.Now, msg));
-                while (debugBuffer.Count > 500)
+                while (debugBuffer.Count > 1000)
                 {
-                    _ = debugBuffer.Dequeue();
+                    _ = debugBuffer.TryDequeue(out _);
                 }
             }
             // ignore failed inserts
@@ -353,7 +353,7 @@ namespace TeslaLogger
                         if (line.Contains("PRETTY_NAME"))
                         {
                             var a = line.Split('=');
-                            return a[1].Replace("\"","");
+                            return a[1].Replace("\"", "");
                         }
                     }
                 }
@@ -362,7 +362,8 @@ namespace TeslaLogger
                     return "-";
                 }
             }
-            catch (Exception ex){
+            catch (Exception ex)
+            {
                 Logfile.Log(ex.ToString());
             }
 
@@ -467,10 +468,11 @@ namespace TeslaLogger
                         vin[7] == '6' || // Triple Motor Models S und Model X 2021 Plaid
                         vin[7] == 'B' || // Dual motor - standard Model 3
                         vin[7] == 'C' || // Dual motor - performance Model 3
-                        vin[7] == 'E' ||  // Dual motor - Model Y
-                        vin[7] == 'F' ||  // Dual motor Performance - Model Y
-                        vin[7] == 'K' ||  // Dual motor Standard "Hairpin Windings"
-                        vin[7] == 'L'   // Dual motor Performance "Hairpin Windings"
+                        vin[7] == 'E' || // Dual motor - Model Y
+                        vin[7] == 'F' || // Dual motor Performance - Model Y
+                        vin[7] == 'K' || // Dual motor Standard "Hairpin Windings"
+                        vin[7] == 'L' || // Dual motor Performance "Hairpin Windings"
+                        vin[7] == 'T'    // Dual motor Performance "Highland"
                     )
                 {
                     AWD = true;
@@ -489,7 +491,7 @@ namespace TeslaLogger
                 switch (vin[6])
                 {
                     case 'E':
-                        if(MIC)
+                        if (MIC)
                             battery = "NMC";
                         else
                             if (vin[7] == 'S') battery = "LFP"; //Y SR MIG BYD
@@ -553,6 +555,9 @@ namespace TeslaLogger
                     case 'J':
                     case 'S':
                         motor = "3/Y single";
+                        break;
+                    case 'T':
+                        motor = "3 dual performance highland";
                         break;
                 }
 
@@ -971,7 +976,7 @@ namespace TeslaLogger
                     }
                     else if (j["update"] == "none")
                     {
-                        return UpdateType.none;
+                        return UpdateType.stable;
                     }
                 }
             }
@@ -1206,6 +1211,55 @@ namespace TeslaLogger
             return false;
         }
 
+        public static bool IsUnitTest()
+        {
+            try
+            {
+                foreach(var ass in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if(ass.FullName.StartsWith("NUnit.framework", StringComparison.CurrentCultureIgnoreCase) ||
+                       ass.FullName.StartsWith("Microsoft.VisualStudio.QualityTools.UnitTestFramework", StringComparison.InvariantCultureIgnoreCase) ||
+                       ass.FullName.StartsWith("Microsoft.VisualStudio.TestPlatform.MSTest.TestAdapter", StringComparison.InvariantCultureIgnoreCase)||
+                       ass.FullName.StartsWith("Microsoft.TestPlatform", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ex.ToExceptionless().FirstCarUserID().Submit();
+                Logfile.ExceptionWriter(ex, "IsUnitTest");
+            }
+            return false;
+        }
+
+        public static bool IsDotnet8()
+        {
+            return Environment.Version?.ToString()?.StartsWith("8.0") == true;
+        }
+
+        public static bool IsDockerNET8()
+        {
+            try
+            {
+                string filename = "/tmp/teslalogger-dockernet8";
+
+                if (File.Exists(filename))
+                {
+                    return true;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                ex.ToExceptionless().FirstCarUserID().Submit();
+                Logfile.ExceptionWriter(ex, "IsDockerNET8");
+            }
+
+            return false;
+        }
+
         public static bool IsShareData()
         {
             try
@@ -1281,6 +1335,33 @@ namespace TeslaLogger
 
             _OSVersion = ret;
             return ret;
+        }
+
+
+        public static double CalculateBearing(double lat1, double lon1, double lat2, double lon2)
+        {
+            double dLon = ToRadians(lon2 - lon1);
+            double lat1Rad = ToRadians(lat1);
+            double lat2Rad = ToRadians(lat2);
+
+            double y = Math.Sin(dLon) * Math.Cos(lat2Rad);
+            double x = Math.Cos(lat1Rad) * Math.Sin(lat2Rad) - Math.Sin(lat1Rad) * Math.Cos(lat2Rad) * Math.Cos(dLon);
+
+            double bearing = Math.Atan2(y, x);
+            bearing = ToDegrees(bearing);
+            bearing = (bearing + 360) % 360; // Normalize to 0-360
+
+            return bearing;
+        }
+
+        private static double ToRadians(double degrees)
+        {
+            return degrees * (Math.PI / 180);
+        }
+
+        private static double ToDegrees(double radians)
+        {
+            return radians * (180 / Math.PI);
         }
 
         // source: https://www.limilabs.com/blog/json-net-formatter
@@ -1502,9 +1583,9 @@ namespace TeslaLogger
                     // copy to logs dir with timestamp
                     ExecMono("/bin/cp", nohup + " " + targetFile);
                     // gzip copied file
-                    ExecMono("bin/gzip", targetFile);
+                    ExecMono("/bin/gzip", targetFile);
                     // empty nohup.out
-                    ExecMono("bin/echo", " > " + nohup);
+                    ExecMono("/bin/sh", $"-c '/bin/echo > {nohup}'");
                     // cleanup old logfile backups
                     // old means older than 90 days
                     DirectoryInfo di = new DirectoryInfo(LogDir);
@@ -1877,9 +1958,9 @@ WHERE
                         File.Decrypt(path);
                     }
                     FileInfo fileInfo = new FileInfo(path);
-                    HttpResponseMessage response = await httpClient.GetAsync(uri).ConfigureAwait(true);
+                    HttpResponseMessage response = await httpClient.GetAsync(uri).ConfigureAwait(false);
                     _ = response.EnsureSuccessStatusCode();
-                    using (Stream responseContentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(true))
+                    using (Stream responseContentStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                     {
                         using (FileStream outputFileStream = File.Create(fileInfo.FullName))
                         {
@@ -2050,6 +2131,45 @@ WHERE
 
             return "";
         }
+
+        public static int CalculateSleepSeconds(int RateLimitPerDay, int UsedCommands, DateTime utcnow)
+        {
+            var remainingCommands = RateLimitPerDay - UsedCommands;
+
+            var min = utcnow.Hour * 60 + utcnow.Minute;
+            var minutesperday = 1440;
+            var remainminutes = minutesperday - min;
+            var remainsecounds = remainminutes * 60;
+
+            var sleepPerCommand = remainsecounds / remainingCommands;
+
+            if (sleepPerCommand < 10)
+                sleepPerCommand = 10;
+
+            return (int)sleepPerCommand;
+        }
+
+        internal static double MphToKmhRounded(double speed_mph)
+        {
+            int speed_floor = (int)(speed_mph * 1.609344);
+            // handle special speed_floor as Math.Round is off by +1
+            if (
+                speed_floor == 30
+                || speed_floor == 33
+                || speed_floor == 83
+                || speed_floor == 123
+                || speed_floor == 133
+                )
+            {
+                return speed_floor;
+            }
+            return Math.Round(speed_mph / 0.62137119223733);
+        }
+
+        internal static double MlToKm(double miles, int decimals = 3)
+        {
+            return Math.Round(miles * 1.609344, decimals);
+        }
     }
 
     public static class EventBuilderExtension
@@ -2083,6 +2203,181 @@ WHERE
             }
 
             return v;
+        }
+    }
+
+    public static class StringCipher
+    {
+        // This constant is used to determine the keysize of the encryption algorithm in bits.
+        // We divide this by 8 within the code below to get the equivalent number of bytes.
+        private const int Keysize = 128;
+
+        // This constant determines the number of iterations for the password bytes generation function.
+        private const int DerivationIterations = 1000;
+
+        public static string Encrypt(string plainText, string passPhrase)
+        {
+            // Salt and IV is randomly generated each time, but is preprended to encrypted cipher text
+            // so that the same Salt and IV values can be used when decrypting.  
+            var saltStringBytes = Generate128BitsOfRandomEntropy();
+            var ivStringBytes = Generate128BitsOfRandomEntropy();
+            var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations))
+            {
+                var keyBytes = password.GetBytes(Keysize / 8);
+                using (var symmetricKey = new RijndaelManaged())
+                {
+                    symmetricKey.BlockSize = 128;
+                    symmetricKey.Mode = CipherMode.CBC;
+                    symmetricKey.Padding = PaddingMode.PKCS7;
+                    using (var encryptor = symmetricKey.CreateEncryptor(keyBytes, ivStringBytes))
+                    {
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            using (var cryptoStream = new CryptoStream(memoryStream, encryptor, CryptoStreamMode.Write))
+                            {
+                                cryptoStream.Write(plainTextBytes, 0, plainTextBytes.Length);
+                                cryptoStream.FlushFinalBlock();
+                                // Create the final bytes as a concatenation of the random salt bytes, the random iv bytes and the cipher bytes.
+                                var cipherTextBytes = saltStringBytes;
+                                cipherTextBytes = cipherTextBytes.Concat(ivStringBytes).ToArray();
+                                cipherTextBytes = cipherTextBytes.Concat(memoryStream.ToArray()).ToArray();
+                                memoryStream.Close();
+                                cryptoStream.Close();
+                                return Convert.ToBase64String(cipherTextBytes);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public static string Decrypt(string cipherText, string passPhrase)
+        {
+            // Get the complete stream of bytes that represent:
+            // [32 bytes of Salt] + [32 bytes of IV] + [n bytes of CipherText]
+            var cipherTextBytesWithSaltAndIv = Convert.FromBase64String(cipherText);
+            // Get the saltbytes by extracting the first 32 bytes from the supplied cipherText bytes.
+            var saltStringBytes = cipherTextBytesWithSaltAndIv.Take(Keysize / 8).ToArray();
+            // Get the IV bytes by extracting the next 32 bytes from the supplied cipherText bytes.
+            var ivStringBytes = cipherTextBytesWithSaltAndIv.Skip(Keysize / 8).Take(Keysize / 8).ToArray();
+            // Get the actual cipher text bytes by removing the first 64 bytes from the cipherText string.
+            var cipherTextBytes = cipherTextBytesWithSaltAndIv.Skip((Keysize / 8) * 2).Take(cipherTextBytesWithSaltAndIv.Length - ((Keysize / 8) * 2)).ToArray();
+
+            using (var password = new Rfc2898DeriveBytes(passPhrase, saltStringBytes, DerivationIterations))
+            {
+                var keyBytes = password.GetBytes(Keysize / 8);
+                using (var symmetricKey = new RijndaelManaged())
+                {
+                    symmetricKey.BlockSize = 128;
+                    symmetricKey.Mode = CipherMode.CBC;
+                    symmetricKey.Padding = PaddingMode.PKCS7;
+                    using (var decryptor = symmetricKey.CreateDecryptor(keyBytes, ivStringBytes))
+                    {
+                        using (var memoryStream = new MemoryStream(cipherTextBytes))
+                        {
+                            using (var cryptoStream = new CryptoStream(memoryStream, decryptor, CryptoStreamMode.Read))
+                            using (var streamReader = new StreamReader(cryptoStream, Encoding.UTF8))
+                            {
+                                return streamReader.ReadToEnd();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static byte[] Generate128BitsOfRandomEntropy()
+        {
+            var randomBytes = new byte[16]; // 16 Bytes will give us 128 bits.
+            using (var rngCsp = new RNGCryptoServiceProvider())
+            {
+                // Fill the array with cryptographically secure random bytes.
+                rngCsp.GetBytes(randomBytes);
+            }
+            return randomBytes;
+        }
+
+        public static string GetPassPhrase()
+        {
+            try
+            {
+                var path = "encryption.txt";
+
+                if (!File.Exists(path))
+                {
+                    string createdPassPhrase = Guid.NewGuid().ToString();
+                    File.WriteAllText(path, createdPassPhrase);
+                    Logfile.Log("Create encryption passphrase");
+                }
+
+                return File.ReadAllText(path);
+            }
+            catch (Exception ex)
+            {
+                ex.ToExceptionless().FirstCarUserID().Submit();
+                Logfile.Log(ex.ToString());
+            }
+            return "";
+        }
+
+        public static string Encrypt(string token)
+        {
+            try
+            {
+                var PassPhrase = StringCipher.GetPassPhrase();
+                if (!String.IsNullOrEmpty(PassPhrase))
+                {
+                    var encrypted = StringCipher.Encrypt(token, PassPhrase);
+                    token = "encrypted:" + encrypted;
+                }
+
+                return token;
+            }
+            catch (Exception ex)
+            {
+                ex.ToExceptionless().FirstCarUserID().Submit();
+                Logfile.Log(ex.ToString());
+            }
+
+            return token;
+        }
+
+        public static string Decrypt(string token)
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(token))
+                    return token;
+
+                if (token.StartsWith("encrypted:"))
+                {
+                    token = token.Substring(10);
+
+                    var PassPhrase = StringCipher.GetPassPhrase();
+                    if (!String.IsNullOrEmpty(PassPhrase))
+                    {
+                        var decrypted = StringCipher.Decrypt(token, PassPhrase);
+                        return decrypted;
+                    }
+
+                    return token;
+                }
+            }
+            catch (CryptographicException ex)
+            {
+                Logfile.Log("Error in decryption!!!\r\n" + ex.ToString());
+                ex.ToExceptionless().FirstCarUserID().Submit();
+
+                return "";
+            }
+            catch (Exception ex)
+            {
+                Logfile.Log("Error in decryption!!!\r\n" + ex.ToString());
+                ex.ToExceptionless().FirstCarUserID().Submit();
+            }
+
+            return token;
         }
     }
 }

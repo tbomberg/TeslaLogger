@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
-using Exceptionless;
 using MySql.Data.MySqlClient;
 
 namespace TeslaLogger
@@ -35,7 +34,7 @@ namespace TeslaLogger
                 Logfile.Log(Dump());
                 while (true)
                 {
-                    if (DateTime.Now.Minute == 0)
+                    if (DateTime.Now.Minute % 30 == 0)
                     {
                         Logfile.Log(Dump());
                         Thread.Sleep(60000); // sleep 60 seconds
@@ -55,7 +54,10 @@ namespace TeslaLogger
             _ = sb.Append($"TeslaLogger process statistics{Environment.NewLine}");
             try
             {
+                var tcount = System.Diagnostics.Process.GetCurrentProcess().Threads.Count;
+
                 Process proc = Process.GetCurrentProcess();
+                _ = sb.Append($"Thread count:        {tcount,12}{Environment.NewLine}");
                 _ = sb.Append($"WorkingSet64:        {proc.WorkingSet64,12}{Environment.NewLine}");
                 _ = sb.Append($"PeakWorkingSet64:    {proc.PeakWorkingSet64,12}{Environment.NewLine}");
                 _ = sb.Append($"PrivateMemorySize64: {proc.PrivateMemorySize64,12}{Environment.NewLine}");

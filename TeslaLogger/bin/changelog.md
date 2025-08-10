@@ -1,3 +1,135 @@
+# Version 1.63.7
+- Info about deprecated Docker. Please update to new Teslalogger Image: [LINK](https://github.com/bassmaster187/TeslaLogger/blob/master/docs/en/upgrade-to-net8-docker.md)
+
+# Version 1.63.2
+- faster logging (positions every 10 seconds)
+- Komoot integration (admin panel / extras / Komoot Settings)
+- New Wallbox: Openwb 2
+- Local Fleet Telemetry support with ZMQ
+
+# Version 1.63.0
+- Stable Version
+
+# Version 1.62.14
+- New Wallboxes: SmartEVSE 3 and WARP
+- EVCC supports multiple loadpoints and cars now. You can find a loadpoint by car name (EVCC should be configured correctly)
+
+# Version 1.62.13
+- Tesla has introduced more granular control over data access: [LINK](https://developer.tesla.com/docs/fleet-api/announcements#2024-11-26-introducing-a-new-oauth-scope-vehicle-location) 
+  Third-party apps can request permission to access location information. Starting in March 2025, no location information will be shared unless you grant the necessary permission.
+
+# Version 1.62.12
+- Fleet API: new signals: ExpectedEnergyPercentAtTripArrival and ExpectedEnergyPercentAtTripEnd
+
+# Version 1.62.5
+- Detect Model Y LR RWD
+- BF: Split drives
+- BF: inactive cars
+- BF: faster startup (inactive cars will be checked after active cars)
+
+# Version 1.62.4
+- Better support for new Tesla Model S/X 2021 
+
+# Version 1.62.3
+- Fleet API: Doors, Windows, Trunk, Frunk and Locked status will be send to Admin Panel and MQTT
+
+# Version 1.62.1
+- BF: Support for new Tesla Model S/X 2021 - Tesla identified the new Model S/X as pre face lift Model S/X.
+
+# Version 1.62.0
+- Update = none is no longer supported. Tesla may force me to update a version so "none" is now "stable"
+
+# Version 1.61.0
+- Simplified the switch to Fleet API. 
+- Infos if you need to switch to Fleet API in the admin panel. 
+- Info if you need a subscription in the admin panel.
+- Info screen about Fleet API and subscription won't be shown anymore if you have a subscription and Fleet API is enabled.
+- Direct link to subscription in the My Tesla Credentials settings if you need to switch to Fleet API.
+- Don't show the subscription info if you are using the old Tesla API. (old Model S/X)
+
+# Version 1.60.6
+- Fleet API: TPMS, VehicleName, Trim, CarType, Version now available
+
+# Version 1.60.3
+- don't use data commands at all for fleet api cars
+
+# Version 1.60.2
+- don't use nearby_charging_sites anymore in fleet api because it is a paid feature
+
+# Version 1.60.1
+- You can rename your cars in the admin panel / settings / my Tesla Credentials. Useful if Tesla API has overwritten an empty name or for old cars without access anymore. The name will be used in the Grafana dashboards and in the MQTT topics.
+
+# Version 1.60.0
+- Stable version
+
+# Version 1.59.12
+- Daily info on admin panel about the need to migrate to Fleet API and the subscription model
+- Bugfixes for charging state detection with Fleet API / more signals
+
+# Version 1.59.11
+- From the beginning of 2025, Tesla will charge money for the use of FleetAPI and will probably switch off the unofficial “Owners API”. Therefore I am forced to offer a monthly subscription for Teslalogger. Please switch your Teslas to FleetAPI and take out the subscription model. We do not yet know what will happen with Model S/X before 2021. For this reason, please do not switch the old Model S/X to Fleet API. 
+- Subscription link in Settings/MyTesla
+- Show destination and eta in Admin Panel with FleetAPI
+
+# Version 1.59.9
+- Use as less commands as possible with FleetAPI
+
+# Version 1.59.8
+- Show signal counter for Fleet API cars in Settings / My Tesla Credentials
+
+# Version 1.59.7
+- Dashboard Trips Monthly Statistics now also shows anual statistics
+- Support for Model 3 Highland
+
+# Version 1.59.6
+- BF: missing trip because of Duplicate entry 'xxx' for key 'ix_startpos'
+- XSS vulnerability in some php files. Thanks to Mohammed Shine 
+
+# Version 1.59.5
+- BF: Fleet API detecting DC charging on newer Tesla firmware
+ 
+# Version 1.59.4
+- BF: Fleet API detecting AC charging on newer Tesla firmware
+
+# Version 1.59.3
+- Support for new FW 2024.26 with Fleet API
+
+# Version 1.59.0
+- Tesla API has been changed!
+
+# Version 1.58.2
+- Many improvements for Fleet API
+
+# Version 1.58.2
+- Many changes to Fleet API and Owners API due to command limit by tesla (Owners API: 600/day, Fleet API: 300/day) [LINK](https://github.com/bassmaster187/TeslaLogger/issues/1304)
+- Dashboard Mothership filter by car
+
+# Version 1.58.1
+- Using Telemetry Server even with old Tesla API. Require Virtual Key
+- New update client
+- MQTT: active cars only
+- Calculated Power/Current/Phases in Admin-Panel and MQTT
+
+# Version 1.58.0
+- New stable version
+- Encryption file is protected against grafana, apache and mariadb 
+
+# Version 1.57.14
+- Tesla access token and refresh token are stored encryted
+
+# Version 1.57.13
+- Use Guest NearbySuCService to complete Supercharger usage map
+
+# Version 1.57.11
+- Rollback code to 1.57.9
+
+# Version 1.57.10
+- Show virtual key and access type in settings / cars
+
+# Version 1.57.9
+- New Wallbox supported: cFos
+- New Wallbox supported: EVCC
+
 # Version 1.57.8
 - Dashboard consumption shows the usage of Autopilot / TACC in different colors (Fleet Telemetry). [Screenshot](https://raw.githubusercontent.com/bassmaster187/TeslaLogger/master/TeslaLogger/screenshots/Autopilot.PNG)
 

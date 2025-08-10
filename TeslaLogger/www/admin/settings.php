@@ -231,7 +231,7 @@ echo(menu("Settings"));
 <div>
 <table>
 <tr><td><h1 style="margin-top:0px;"><?php t("Credentials"); ?></h1></td><td></td></tr>
-<tr><td><?php t("MyTesla"); ?></td><td><button onclick="window.location.href='password.php';"><?php t("Credentials"); ?></button></td></tr>
+<tr><td><?php t("MyTesla"); ?> / <?php t("MyLucid"); ?></td><td><button onclick="window.location.href='password.php';"><?php t("Credentials"); ?></button></td></tr>
 <tr><td><?php t("Teslalogger Adminpanel"); ?></td><td><button onclick="window.location.href='adminpanelpassword.php';"><?php t("Credentials"); ?></button></td></tr>
 <tr><td><h1><?php t("Settings"); ?></h1></td><td></td></tr>
 	<tr><td valign="top"><b><?php t("Language"); ?>:</b></td><td>
@@ -244,8 +244,11 @@ echo(menu("Settings"));
 		<option value="it">Italiano</option>
 		<option value="nl">Nederlands</option>
 		<option value="no">Norsk</option>
+		<option value="pl">Polski</option>
 		<option value="pt">Português</option>
 		<option value="ru">Русский</option>
+		<option value="ta">தமிழ் – Tamil</option>
+		<option value="tr">Türkçe</option>
 		<option value="cn">漢語</option>
 	</select>
 	</td></tr>
