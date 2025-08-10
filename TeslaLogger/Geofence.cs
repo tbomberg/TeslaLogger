@@ -147,7 +147,11 @@ namespace TeslaLogger
             
             if (fsw == null)
             {
-                fsw = new FileSystemWatcher(FileManager.GetExecutingPath(), "*.csv");
+                var path = FileManager.GetFilePath(TLFilename.GeofencePrivateFilename);
+                FileInfo fpath = new FileInfo(path);
+                var dir = fpath.Directory;
+
+                fsw = new FileSystemWatcher(dir.FullName, "*.csv");
                 FSWCounter++;
                 if (FSWCounter > 1) 
                 {
@@ -224,6 +228,8 @@ namespace TeslaLogger
         {
             list.Clear();
             filename = filename.Replace(@"Debug\", "");
+            filename = filename.Replace(@"net8.0\", "");
+            filename = filename.Replace(@"/Debug/net8.0", "");
             int replaceCount = 0;
             if (File.Exists(filename))
             {

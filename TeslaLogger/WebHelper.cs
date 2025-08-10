@@ -64,7 +64,7 @@ namespace TeslaLogger
         internal string conn_charge_cable = "";
         internal bool fast_charger_present; // defaults to false;
         //private bool stopStreaming = false;
-        private string elevation = "";
+        protected string elevation = "";
         private DateTime elevation_time = DateTime.Now;
         internal DateTime lastTokenRefresh = DateTime.Now;
         internal DateTime lastIsDriveTimestamp = DateTime.Now;
@@ -254,7 +254,7 @@ namespace TeslaLogger
             }
         }
 
-        public bool RestoreToken()
+        public virtual bool RestoreToken()
         {
             try
             {
@@ -353,7 +353,7 @@ namespace TeslaLogger
 
                     httpClientForAuthentification = new HttpClient(handler);
                     httpClientForAuthentification.Timeout = TimeSpan.FromSeconds(30);
-                    httpClientForAuthentification.DefaultRequestHeaders.Add("User-Agent", ApplicationSettings.Default.UserAgent);
+                    // NET8 httpClientForAuthentification.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent.ToString());
                     httpClientForAuthentification.DefaultRequestHeaders.Add("x-tesla-user-agent", "TeslaApp/3.4.4-350/fad4a582e/android/8.1.0");
                     //client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("*/*"));
                     //httpClientForAuthentification.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
@@ -373,7 +373,7 @@ namespace TeslaLogger
                 System.IO.File.WriteAllText("Logfile_GetToken_" + name + ".txt", resultContent);
         }
 
-        public string GetToken()
+        public virtual string GetToken()
         {
             string resultContent = "";
             MatchCollection m;
@@ -463,7 +463,8 @@ namespace TeslaLogger
                     using (HttpClient client = new HttpClient(handler))
                     {
                         client.Timeout = TimeSpan.FromSeconds(300);
-                        client.DefaultRequestHeaders.Add("User-Agent", ApplicationSettings.Default.UserAgent);
+                        ProductInfoHeaderValue userAgent = new ProductInfoHeaderValue("Teslalogger", Assembly.GetExecutingAssembly().GetName().Version.ToString());
+                        httpclient_teslalogger_de.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent.ToString());
                         client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
                         client.DefaultRequestHeaders.Connection.Add("keep-alive");
 
@@ -996,7 +997,7 @@ namespace TeslaLogger
             lastCharging_State = "";
         }
 
-        internal bool IsCharging(bool justCheck = false, bool noMemcache = false)
+        public virtual bool IsCharging(bool justCheck = false, bool noMemcache = false)
         {
             if (car.FleetAPI)
             {
@@ -1281,7 +1282,7 @@ namespace TeslaLogger
             }
         }
 
-        public string GetVehicles()
+        public virtual string GetVehicles()
         {
             string resultContent = "";
             while (true)
@@ -1680,7 +1681,7 @@ namespace TeslaLogger
         public static object isOnlineLock = new object();
 #pragma warning restore CA2211 // Nicht konstante Felder dürfen nicht sichtbar sein
 
-        public async Task<string> IsOnline(bool returnOnUnauthorized = false)
+        public async virtual Task<string> IsOnline(bool returnOnUnauthorized = false)
         {
             string resultContent = "";
             try
@@ -1992,7 +1993,7 @@ namespace TeslaLogger
             return "NULL";
         }
 
-        internal void CheckRefreshToken()
+        internal virtual void CheckRefreshToken()
         {
             if (nextTeslaTokenFromRefreshToken < DateTime.UtcNow)
             {
@@ -2001,7 +2002,7 @@ namespace TeslaLogger
             }
         }
 
-        void CheckVehicleConfig()
+        protected void CheckVehicleConfig()
         {
             if (car.FleetAPI)
             {
@@ -2526,185 +2527,37 @@ namespace TeslaLogger
                     return;
                 }
             }
-
-
-            /*
-            if (car.Model == "MS")
+            else if (car.CarType == "LUCID")
             {
-                if (car.Battery == "BTX5")
+                if (car.TrimBadging == "PURE")
                 {
-                    if (car.AWD)
-                    {
-                        eff = "0.186";
-                        car = "S 75D";
-                    }
+                    if (year == 2025)
+                        WriteCarSettings("0.119", "Lucid Air PURE 2025");
                     else
-                    {
-                        eff = "0.185";
-                        car = "S 75";
-                    }
+                        WriteCarSettings("0.134", "Lucid Air PURE");
+                    return;
                 }
-                else if (car.Battery == "BTX4")
+                else if (car.TrimBadging == "TOURING")
                 {
-                    if (car.Performance)
-                    {
-                        eff = "0.200";
-                        car = "S P90D";
-                    }
-                    else
-                    {
-                        eff = "0.189";
-                        car = "S90D";
-                    }
+                    WriteCarSettings("0.134", "Lucid Air TOURING");
+                    return;
                 }
-                else if (car.Battery == "BTX6")
+                else if (car.TrimBadging == "GRAND TOURING")
                 {
-                    if (car.Performance)
-                    {
-                        eff = "0.200";
-                        car = "S P100D";
-                    }
-                    else
-                    {
-                        eff = "0.189";
-                        car = "S 100D";
-                    }
+                    WriteCarSettings("0.134", "Lucid Air GRAND TOURING");
+                    return;
                 }
-                else if (car.Battery == "BTX8")
+                else if (car.TrimBadging == "DREAM EDITION")
                 {
-                    if (car.AWD)
-                    {
-                        eff = "0.186";
-                        car = "S 75D (85kWh)";
-                    }
-                    else
-                    {
-                        eff = "0.185";
-                        car = "S 75 (85kWh)";
-                    }
-                }
-                else if (car.Battery == "BT85")
-                {
-                    if (car.AWD)
-                    {
-                        if (car.Performance)
-                        {
-                            car = "S P85D";
-                            eff = "0.201";
-                        }
-                        else
-                        {
-                            car = "S 85D";
-                            eff = "0.186";
-                        }
-                    }
-                    else
-                    {
-                        if (car.Performance)
-                        {
-                            car = "S P85";
-                            eff = "0.210";
-                        }
-                        else
-                        {
-                            car = "S 85";
-                            eff = "0.201";
-                        }
-                    }
-                }
-                else if (car.Battery == "PBT85")
-                {
-                    car = "S P85";
-                    eff = "0.210";
-                }
-                else if (car.Battery == "BT70")
-                {
-                    car = "S 70 ?";
-                    eff = "0.200";
-                }
-                else if (car.Battery == "BT60")
-                {
-                    car = "S 60 ?";
-                    eff = "0.200";
+                    WriteCarSettings("0.134", "Lucid Air DREAM EDITION");
+                    return;
                 }
                 else
                 {
-                    car = "S ???";
-                    eff = "0.200";
+                    car.WhTR = 134;
+                    car.WriteSettings();
                 }
             }
-            else if (car.Model == "MX")
-            {
-                if (car.Battery == "BTX5")
-                {
-                    eff = "0.208";
-                    car = "X 75D";
-                }
-                else if (car.Battery == "BTX4")
-                {
-                    if (!car.Performance)
-                    {
-                        eff = "0.208";
-                        car = "X 90D";
-                    }
-                    else
-                    {
-                        eff = "0.217";
-                        car = "X P90D";
-                    }
-                }
-                else if (car.Battery == "BTX6")
-                {
-                    if (car.Performance)
-                    {
-                        eff = "0.226";
-                        car = "X P100D";
-                    }
-                    else
-                    {
-                        eff = "0.208";
-                        car = "X 100D";
-                    }
-                }
-                else
-                {
-                    car = "X ???";
-                    eff = "0.208";
-                }
-
-            }
-            else if (car.Model == "M3")
-            {
-                if (car.Battery == "BT37")
-                {
-                    if (car.Performance)
-                    {
-                        eff = "0.153";
-                        car = "M3P";
-                    }
-                    else
-                    {
-                        eff = "0.153";
-                        car = "M3";
-                    }
-                }
-                else
-                {
-                    eff = "0.153";
-                    car = "M3 ???";
-                }
-            }
-            else
-            {
-                if (car.Battery == "BT85")
-                {
-                    car = "S 85 ?";
-                    eff = "0.200";
-                }
-            }
-
-            WriteCarSettings(eff, car);
-            */
         }
 
         private void WriteCarSettings(string eff, string ModelName)
@@ -2720,7 +2573,7 @@ namespace TeslaLogger
             }
         }
 
-        public bool IsDriving(bool justinsertdb = false)
+        public virtual bool IsDriving(bool justinsertdb = false)
         {
             if (car.FleetAPI)
             {
@@ -3008,7 +2861,7 @@ namespace TeslaLogger
             }
         }
 
-        private void StartStream()
+        protected virtual void StartStream()
         {
             string resultContent = null;
             byte[] buffer = new byte[1024];
@@ -4113,7 +3966,7 @@ WHERE
             return -1;
         }
 
-        internal async Task<double> GetOdometerAsync()
+        public virtual async Task<double> GetOdometerAsync()
         {
             string resultContent = "";
             try
@@ -4934,7 +4787,8 @@ WHERE
                     { "year" , car.Year.ToString() },
                     { "motor" , car.Motor } ,
                     { "wt" , car.wheel_type } ,
-                    { "vin" , obfuscatedVin} // just the first 11 chars of the vin will be sent. The serial number is truncated!
+                    { "vin" , obfuscatedVin}, // just the first 11 chars of the vin will be sent. The serial number is truncated!
+                    { "NET8", Tools.IsDotnet8() ? "1" : "0"  }
                 };
 
                 using (FormUrlEncodedContent content = new FormUrlEncodedContent(d))
@@ -5006,6 +4860,14 @@ WHERE
 
             try
             {
+                if (Tools.IsDockerNET8())
+                {
+                    using (WebClient wc = new WebClient())
+                    {
+                        contents = wc.DownloadString("https://teslalogger.de/latest_teslalogger_docker_version.txt");
+                        return contents;
+                    }
+                }
 
                 using (WebClient wc = new WebClient())
                 {
@@ -5221,7 +5083,8 @@ WHERE
         {
             HttpClient c = new HttpClient();
             c.Timeout = TimeSpan.FromSeconds(10);
-            c.DefaultRequestHeaders.Add("User-Agent", ApplicationSettings.Default.UserAgent);
+            ProductInfoHeaderValue userAgent = new ProductInfoHeaderValue("Teslalogger", Assembly.GetExecutingAssembly().GetName().Version.ToString());
+            c.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent.ToString());
             c.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             c.DefaultRequestHeaders.Connection.Add("keep-alive");
             c.DefaultRequestHeaders.Add("Authorization", "APIKEY 54ac054f-0412-4747-b788-bcc8c6b60f27");

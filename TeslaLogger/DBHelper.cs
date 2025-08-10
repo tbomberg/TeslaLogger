@@ -1786,7 +1786,7 @@ HAVING
             }
         }
 
-        internal void CleanPasswort()
+        internal virtual void CleanPasswort()
         {
             try
             {
@@ -7425,8 +7425,6 @@ ORDER BY startdate", con))
                     return cmd.LastInsertedId;
                 }
             }
-
-            return 0;
         }
 
         internal double GetDrivenKm(DateTime startDate, DateTime endDate)

@@ -8,9 +8,11 @@ using MySql.Data.MySqlClient;
 using Exceptionless;
 using Newtonsoft.Json;
 using System.Runtime.Caching;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Net;
+using TeslaLoggerNET8.Lucid;
 
 namespace TeslaLogger
 {
@@ -67,6 +69,12 @@ namespace TeslaLogger
                 Car car = Car.Allcars[id];
                 //if (car.IsInService())
                 //    continue;
+
+                if (car is LucidCar)
+                {
+                    Thread.Sleep(100);
+                    continue;
+                }    
 
                 if (car.FleetAPI)
                 {

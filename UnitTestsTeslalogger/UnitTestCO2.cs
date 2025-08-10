@@ -22,7 +22,6 @@ namespace UnitTestsTeslalogger
         public static void ClassInit(TestContext context)
         {
             ServicePointManager.ServerCertificateValidationCallback += (p1, p2, p3, p4) => true;
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
 
             dateTime = new DateTime(2022, 12, 21, 22, 00, 00);
             co2 = new CO2();
@@ -265,7 +264,6 @@ namespace UnitTestsTeslalogger
         public void TestGetDataDB()
         {
             ServicePointManager.ServerCertificateValidationCallback += (p1, p2, p3, p4) => true;
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3 | SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
 
             DataTable dt = null;
 

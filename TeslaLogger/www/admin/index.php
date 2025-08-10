@@ -61,6 +61,7 @@ else
 	var TemperatureUnit = "<?php echo($TemperatureUnit); ?>";
 	var PowerUnit = "<?php echo($PowerUnit); ?>";
 	var Range  = "<?php echo ($Range); ?>";
+	var isDockerNet8 = <?php echo (isDockerNet8() ? "true" : "false"); ?>;
 
 	var Display100pctEnable = "<?php echo($Display100pctEnable); ?>";
 
@@ -540,6 +541,9 @@ else
 	else
 		$installed = getTeslaloggerVersion("/etc/teslalogger/git/TeslaLogger/Properties/AssemblyInfo.cs");
 
+	if (empty($installed))
+		$installed = GetFromTeslalogger("getversion");
+
 	if (file_exists("/etc/teslalogger/BRANCH"))
 		$branch = file_get_contents("/etc/teslalogger/BRANCH");
 
@@ -549,7 +553,12 @@ else
 		$onlineversion = getTeslaloggerVersion("https://raw.githubusercontent.com/bassmaster187/TeslaLogger/$branch/TeslaLogger/Properties/AssemblyInfo.cs");
 	}
 	else
-		$onlineversion = getTeslaloggerVersion("https://raw.githubusercontent.com/bassmaster187/TeslaLogger/master/TeslaLogger/Properties/AssemblyInfo.cs");
+	{
+		if (isDockerNET8())
+			$onlineversion = file_get_contents("https://teslalogger.de/latest_teslalogger_docker_version.txt");
+		else
+			$onlineversion = getTeslaloggerVersion("https://raw.githubusercontent.com/bassmaster187/TeslaLogger/master/TeslaLogger/Properties/AssemblyInfo.cs");
+	}
 
 	if ($installed != $onlineversion)
 	{
@@ -569,9 +578,9 @@ function getTeslaloggerVersion($path)
 }
 function getZoomLevel()
 {
-	if (file_exists("/etc/teslalogger/settings.json"))
+	if (file_exists("/tmp/settings.json"))
 	{
-		$content = file_get_contents("/etc/teslalogger/settings.json");
+		$content = file_get_contents("/tmp/settings.json");
 		$j = json_decode($content);
 		if (!empty($j->{"ZoomLevel"}))
 			return $j->{"ZoomLevel"};

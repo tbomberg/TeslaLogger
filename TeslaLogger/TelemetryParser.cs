@@ -1,7 +1,5 @@
 ﻿using Exceptionless;
 using Google.Protobuf.WellKnownTypes;
-using Microsoft.VisualBasic;
-using Microsoft.VisualBasic.Devices;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -803,7 +801,6 @@ namespace TeslaLogger
                         {
                             car.teslaAPIState.AddValue("locked", "bool", l, Tools.ToUnixTime(d), "vehicle_state");
                             car.CurrentJSON.CreateCurrentJSON();
-
                         }
                     }
                     else if (key.EndsWith("Window"))
@@ -1233,7 +1230,6 @@ namespace TeslaLogger
                                 {
                                     double bearing = Tools.CalculateBearing(lastLatitude, lastLongitude, latitude.Value, longitude.Value);
                                     car.CurrentJSON.heading = (int)bearing;
-                                    car.teslaAPIState.AddValue("heading", "int", (int)bearing, Tools.ToUnixTime(d), "drive_state");
                                 }
 
                                 lastLatitude = latitude.Value;

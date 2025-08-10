@@ -12,6 +12,7 @@ using Exceptionless;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Net.Http;
 
 namespace TeslaLogger
 {
@@ -27,9 +28,7 @@ namespace TeslaLogger
         private static Object lastTeslaLoggerVersionCheckObj = new object();
         internal static DateTime GetLastVersionCheck() { return lastTeslaLoggerVersionCheck; }
 
-        private static bool _done; // defaults to false;
-
-        public static bool Done { get => _done; }
+        internal static CancellationTokenSource done = new CancellationTokenSource();
 
         private static Thread ComfortingMessages; // defaults to null;
         public static bool DownloadUpdateAndInstallStarted; // defaults to false;
@@ -57,9 +56,12 @@ namespace TeslaLogger
             ComfortingMessages = new Thread(() =>
             {
                 Random rnd = new Random();
-                while (!Done)
+                while (!done.IsCancellationRequested)
                 {
                     Thread.Sleep(15000 + rnd.Next(15000));
+                    if (done.IsCancellationRequested)
+                        break;
+
                     switch (rnd.Next(3))
                     {
                         case 0:
@@ -292,8 +294,7 @@ namespace TeslaLogger
             {
                 try
                 {
-                    _done = true;
-                    ComfortingMessages.Abort();
+                    done.Cancel();
                 }
                 catch (Exception) { }
             }
@@ -1265,7 +1266,7 @@ PRIMARY KEY(id)
             DownloadUpdateAndInstallStarted = true;
             CheckNET8Installed();
 
-            if (File.Exists("cmd_updated.txt"))
+            if (File.Exists(FileManager.GetCmdUpdatedTxt()))
             {
                 Logfile.Log("Update skipped!");
                 try
@@ -1276,15 +1277,23 @@ PRIMARY KEY(id)
                 return;
             }
 
-            File.AppendAllText("cmd_updated.txt", DateTime.Now.ToLongTimeString());
+            File.AppendAllText(FileManager.GetCmdUpdatedTxt(), DateTime.Now.ToLongTimeString());
             Logfile.Log("Start update");
             ExceptionlessClient.Default.CreateLog("Install", "Start update from " + Assembly.GetExecutingAssembly().GetName().Version).Submit();
 
-            if (Tools.IsMono())
+            if (Tools.IsDockerNET8())
+            {
+                Logfile.Log("use Watchtower");
+                HttpClient client = new HttpClient();
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer teslalogger");
+                client.GetAsync("http://watchtower:8080/v1/update").Wait();
+                return;
+            }
+            else if (Tools.IsMono() || Tools.IsDotnet8())
             {
                 Chmod("VERSION", 666);
                 Chmod("settings.json", 666);
-                Chmod("cmd_updated.txt", 666);
+                Chmod("/etc/teslalogger/cmd_updated.txt", 666);
                 Chmod("MQTTClient.exe.config", 666);
 
                 if (!File.Exists("NOBACKUPONUPDATE"))
@@ -1398,6 +1407,8 @@ PRIMARY KEY(id)
                             {
                                 Directory.Delete("/etc/teslalogger/git", true);
                             }
+                            Directory.CreateDirectory("/etc/teslalogger/git");
+
                             if (Directory.Exists("/etc/teslalogger/tmp/zip"))
                             {
                                 Directory.Delete("/etc/teslalogger/tmp/zip", true);
@@ -1408,7 +1419,10 @@ PRIMARY KEY(id)
                             if (Directory.Exists("/etc/teslalogger/tmp/zip/TeslaLogger-" + master))
                             {
                                 Logfile.Log($"move update files from /etc/teslalogger/tmp/zip/TeslaLogger-" + master + " to /etc/teslalogger/git");
-                                Tools.ExecMono("mv", "/etc/teslalogger/tmp/zip/TeslaLogger-" + master + " /etc/teslalogger/git");
+                                // Tools.ExecMono("mv", "/etc/teslalogger/tmp/zip/TeslaLogger-" + master + " /etc/teslalogger/git");
+                                Tools.CopyFilesRecursively(new DirectoryInfo("/etc/teslalogger/tmp/zip/TeslaLogger-" + master), new DirectoryInfo("/etc/teslalogger/git"), null, false);
+                                Directory.Delete("/etc/teslalogger/tmp/zip/TeslaLogger-" + master, true);
+
                                 if (Directory.Exists("/etc/teslalogger/git/TeslaLogger/GrafanaPlugins"))
                                 {
                                     Logfile.Log("update package: download and unzip successful");
@@ -1470,11 +1484,12 @@ PRIMARY KEY(id)
                 }
 
                 // running in TeslaLogger.exe, prepare update in separate process
-                if (System.Diagnostics.Process.GetCurrentProcess().ProcessName.Equals("TeslaLogger"))
+                if (Process.GetCurrentProcess().ProcessName.Equals("TeslaLogger") || Process.GetCurrentProcess().ProcessName == "dotnet")
                 {
                     try
                     {
                         Tools.CopyFile("/etc/teslalogger/git/TeslaLogger/bin/TLUpdate.exe", "/etc/teslalogger/TLUpdate.exe");
+                        Chmod("/etc/teslalogger/TLUpdate.exe", 777); // Set executable permissions
                         foreach (Car car in Car.Allcars)
                         {
                             car.CurrentJSON.ToKVS();
@@ -1488,7 +1503,8 @@ PRIMARY KEY(id)
                                 FileName = "/etc/teslalogger/TLUpdate.exe",
                                 UseShellExecute = false,
                                 RedirectStandardOutput = true,
-                                CreateNoWindow = true
+                                CreateNoWindow = true,
+                                WorkingDirectory = "/etc/teslalogger"
                             }
                         })
                         {
@@ -1556,6 +1572,9 @@ PRIMARY KEY(id)
 
         public static void CertUpdate()
         {
+            if (Tools.IsDockerNET8())
+                return;
+
             try
             {
                 // https://github.com/KSP-CKAN/CKAN/wiki/SSL-certificate-errors#removing-expired-lets-encrypt-certificates
@@ -1707,11 +1726,11 @@ PRIMARY KEY(id)
                     {
                         Logfile.Log("Update Request!");
 
-                        if (File.Exists("cmd_updated.txt"))
+                        if (File.Exists("/etc/teslalogger/cmd_updated.txt"))
                         {
                             Logfile.Log("delete cmd_updated.txt");
 
-                            File.Delete("cmd_updated.txt");
+                            File.Delete("/etc/teslalogger/cmd_updated.txt");
                         }
                     }
 
@@ -1854,6 +1873,7 @@ PRIMARY KEY(id)
         {
             string filename = Path.Combine(FileManager.GetExecutingPath(), "language-" + language + ".txt");
             filename = filename.Replace("\\bin\\Debug", "\\bin");
+            filename = filename.Replace("/Debug/net8.0", "");
             return filename;
         }
 
@@ -1861,7 +1881,7 @@ PRIMARY KEY(id)
         {
             try
             {
-                if (Tools.IsMono())
+                if (Tools.IsMono() || Tools.IsDocker())
                 {
                     Tools.GrafanaSettings(out string power, out string temperature, out string length, out string language, out string URL_Admin, out string Range, out string URL_Grafana, out string defaultcar, out string defaultcarid);
 
@@ -1883,6 +1903,12 @@ PRIMARY KEY(id)
 
                     Tools.ExecMono("mkdir", "/etc/teslalogger/tmp");
                     Tools.ExecMono("mkdir", "/etc/teslalogger/tmp/Grafana");
+
+                    if (!Directory.Exists("/etc/teslalogger/tmp"))
+                        Directory.CreateDirectory("/etc/teslalogger/tmp/Grafana");
+
+                    if (!Directory.Exists("/etc/teslalogger/tmp"))
+                        Directory.CreateDirectory("/etc/teslalogger/tmp/Grafana");
 
                     bool useNewTrackmapPanel = Directory.Exists("/var/lib/grafana/plugins/pR0Ps-grafana-trackmap-panel");
 
@@ -1937,12 +1963,14 @@ PRIMARY KEY(id)
                             if (f.EndsWith("Laden.json", StringComparison.Ordinal))
                             {
                                 s = s.Replace("outside_temp as 'Außentemperatur [°C]'", "outside_temp * 9/5 + 32 as 'Außentemperatur [°F]'");
+                                s = s.Replace("ModuleTempMin FROM", "Round(ModuleTempMin * 9/5 + 32,0) as ModuleTempMin FROM");
+                                s = s.Replace("ModuleTempMax FROM", "Round(ModuleTempMax * 9/5 + 32,0) as ModuleTempMax FROM");
                             }
                             else if (f.EndsWith("Trip.json", StringComparison.Ordinal))
                             {
                                 s = s.Replace("Ø °C", "Ø °F");
 
-                                s = s.Replace(" outside_temp_avg", "outside_temp_avg * 9/5 + 32 as outside_temp_avg");
+                                s = s.Replace(" outside_temp_avg", " Round(outside_temp_avg * 9/5 + 32,1) as outside_temp_avg");
                             }
                             else if (f.EndsWith("Verbrauch.json", StringComparison.Ordinal))
                             {
@@ -1959,13 +1987,14 @@ PRIMARY KEY(id)
                                 s = s.Replace("Start km", "Start mi");
                                 s = s.Replace("End km", "End mi");
 
-                                s = s.Replace("EndOdometer - StartOdometer AS kmDiff", "(EndOdometer - StartOdometer) / 1.609344 AS kmDiff");
+                                s = s.Replace("EndOdometer - StartOdometer AS kmDiff", "(EndOdometer - StartOdometer) / 1.609344 AS 'mi Diff'");
                                 s = s.Replace("StartOdometer,", " StartOdometer / 1.609344 as StartOdometer,");
                                 s = s.Replace("EndOdometer,", " EndOdometer / 1.609344 as EndOdometer,");
                                 s = s.Replace("100 AS MaxRange", "100 / 1.609344 AS MaxRange");
                                 s = s.Replace("(EndOdometer - StartOdometer) * 100 AS AVGConsumption", "(EndOdometer/1.609344 - StartOdometer/1.609344) * 100 AS AVGConsumption");
 
                                 s = s.Replace("\"unit\": \"lengthkm\"", "\"unit\": \"lengthmi\"");
+                                s = s.Replace("\"kmDiff\"", "\"mi Diff\"");
                             }
                             else if (f.EndsWith("Degradation.json", StringComparison.Ordinal))
                             {
@@ -2303,8 +2332,9 @@ PRIMARY KEY(id)
                     if (!Tools.IsDocker())
                     {
                         Tools.ExecMono("grafana-cli", "admin data-migration encrypt-datasource-passwords");
-                        Tools.ExecMono("service", "grafana-server restart");
                     }
+
+                    Tools.RestartGrafanaServer();
 
                     CopyLanguageFileToTimelinePanel(language);
 
@@ -2451,16 +2481,17 @@ PRIMARY KEY(id)
             return "";
         }
 
-        private static void CopyLanguageFileToTimelinePanel(string language)
+        public const string TimeLinePanelLanguagePath = "/var/lib/grafana/plugins/teslalogger-timeline-panel/dist/language.txt";
+        public static void CopyLanguageFileToTimelinePanel(string language)
         {
             try
             {
                 string languageFilepath = GetLanguageFilepath(language);
                 if (File.Exists(languageFilepath))
                 {
-                    string dst = "/var/lib/grafana/plugins/teslalogger-timeline-panel/dist/language.txt";
-                    Logfile.Log("Copy " + languageFilepath + " to " + dst);
-                    File.Copy(languageFilepath, dst, true);
+                    
+                    Logfile.Log("Copy " + languageFilepath + " to " + TimeLinePanelLanguagePath);
+                    File.Copy(languageFilepath, TimeLinePanelLanguagePath, true);
                 }
             }
             catch (Exception ex)
@@ -2470,17 +2501,23 @@ PRIMARY KEY(id)
             }
         }
 
-        private static void CopySettingsToTimelinePanel()
+        public const string TimeLinePanelSettingsPath = "/var/lib/grafana/plugins/teslalogger-timeline-panel/dist/settings.json";
+        public static void CopySettingsToTimelinePanel()
         {
             try
             {
                 string settingsFilepath = "/etc/teslalogger/settings.json";
+                if (Tools.IsDockerNET8())
+                    settingsFilepath = "/etc/teslalogger/data/settings.json";
+
                 if (File.Exists(settingsFilepath))
                 {
-                    string dst = "/var/lib/grafana/plugins/teslalogger-timeline-panel/dist/settings.json";
-                    Logfile.Log("Copy " + settingsFilepath + " to " + dst);
-                    File.Copy(settingsFilepath, dst, true);
+                    Logfile.Log("Copy " + settingsFilepath + " to " + TimeLinePanelSettingsPath);
+                    File.Copy(settingsFilepath, TimeLinePanelSettingsPath, true);
                 }
+                else
+                    Logfile.Log("Copy: " + settingsFilepath + " NOT FOUND!!!");
+
             }
             catch (Exception ex)
             {
@@ -2672,7 +2709,7 @@ PRIMARY KEY(id)
         {
             try
             {
-                if (!Tools.IsMono())
+                if (!Tools.RunOnLinux())
                 {
                     return;
                 }
